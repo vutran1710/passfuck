@@ -94,6 +94,11 @@
   .split li { margin-bottom: .3rem; }
   .split .private h3 { color: var(--security); }
 
+  .note { margin-top: 1.5rem; color: var(--ink-soft); }
+  .note code, .phone code, p code { font: 500 .9em "IBM Plex Mono", monospace; color: var(--ink); }
+  ol.phone { margin: 0 0 1.5rem; padding-left: 1.4rem; max-width: var(--measure); }
+  ol.phone li { margin-bottom: .55rem; padding-left: .3rem; }
+  ol.phone li::marker { color: var(--security); font: 800 1em "Schibsted Grotesk", sans-serif; }
   .rules { margin: 0 0 1.5rem; padding-left: 1.1rem; max-width: var(--measure); }
   .rules li { margin-bottom: .4rem; }
   .example {
@@ -150,11 +155,26 @@
   <section>
     <h2>Where you use it</h2>
     <dl class="places">
-      <div class="place"><dt>In the browser</dt><dd>Click the Browserpass button in Brave or Chrome to fill the login.</dd></div>
-      <div class="place"><dt>In any Mac app</dt><dd>Open Raycast, type a few letters of the site, and copy or paste the password. This works even in apps that hide their login fields.</dd></div>
-      <div class="place"><dt>On iPhone</dt><dd>Pick it from AutoFill above the keyboard, or open the Pass app, search and tap to copy.</dd></div>
+      <div class="place"><dt>In the browser</dt><dd>Click the Browserpass button in Brave or Chrome, type the alias, and it fills the login.</dd></div>
+      <div class="place"><dt>In any Mac app</dt><dd>Open Raycast, type the alias, and copy or paste the password. This works even in apps that hide their login fields.</dd></div>
+      <div class="place"><dt>On iPhone</dt><dd>Tap Passwords above the keyboard, choose Pass, and search for the alias. Or open the Pass app and tap to copy.</dd></div>
       <div class="place"><dt>In Terminal</dt><dd><code>pass -c github.com</code> copies a password. <code>pass generate newsite.com 24</code> makes a new one.</dd></div>
     </dl>
+    <p class="note">Every entry is saved under an alias you choose, like <code>gh</code> or <code>bank-main</code>, rather than the website's name. That keeps your list of sites private, but it means autofill can't guess the entry from the page you're on. You type the alias to find it.</p>
+  </section>
+
+  <section id="iphone">
+    <h2>On your iPhone</h2>
+    <p>There's no app to build or download from us. Your iPhone uses <a href="https://apps.apple.com/app/pass-password-store/id1205820573">Pass - Password Store</a>, a free, open-source app on the App Store that has been around since 2017. It reads your vault directly, and we checked that it opens keys made from a phrase. Setup takes about five minutes.</p>
+    <ol class="phone">
+      <li>Install <a href="https://apps.apple.com/app/pass-password-store/id1205820573">Pass - Password Store</a> from the App Store.</li>
+      <li>On your Mac, run <code>pf phone</code>. A folder opens with your key, an access key for your vault, and instructions.</li>
+      <li>AirDrop the folder to your iPhone and save it to Files.</li>
+      <li>In the Pass app's settings, import the two keys from Files and enter your vault's address from the instructions. When it asks for your phrase, let it remember it so Face ID can unlock it from then on.</li>
+      <li>In iPhone Settings, open General, then AutoFill &amp; Passwords, and turn on Pass.</li>
+      <li>Delete the folder from your iPhone and your Mac.</li>
+    </ol>
+    <p>New passwords you save in the app sync back to your vault, and your Mac sees them within ten minutes.</p>
   </section>
 
   <section>
@@ -163,7 +183,7 @@
       <div>
         <h3>Anyone can see</h3>
         <ul>
-          <li>Which sites you have accounts on, from the file names</li>
+          <li>The aliases you give your entries, and how many there are</li>
           <li>When each entry was added or changed</li>
           <li>The name and email used to make your key</li>
         </ul>
@@ -171,12 +191,14 @@
       <div class="private">
         <h3>Only you can read</h3>
         <ul>
+          <li>Which website each entry is for</li>
           <li>Passwords</li>
-          <li>Usernames and emails for each site</li>
+          <li>Usernames and emails</li>
           <li>Notes and one-time codes</li>
         </ul>
       </div>
     </div>
+    <p>Pick aliases that mean something only to you. Renaming one later won't erase the old name, because the vault keeps its full history.</p>
     <p>Because the repo is public, anyone can download it and try to guess your phrase on their own computers. Each guess costs them about ten seconds and a gigabyte of memory. That stops casual attempts, but a long-running attacker could still try billions, so the phrase itself has to be strong.</p>
   </section>
 
@@ -196,7 +218,7 @@
 
 <footer>
   <div class="wrap">
-    <p>Built from free, open-source tools: <a href="https://www.passwordstore.org/">pass</a>, <a href="https://github.com/skeeto/passphrase2pgp">passphrase2pgp</a>, <a href="https://github.com/browserpass/browserpass-extension">Browserpass</a>, <a href="https://www.raycast.com/capipo/pass">Raycast Pass</a> and <a href="https://github.com/mssun/passforios">Pass for iOS</a>.</p>
+    <p>Built from free, open-source tools: <a href="https://www.passwordstore.org/">pass</a>, <a href="https://github.com/skeeto/passphrase2pgp">passphrase2pgp</a>, <a href="https://github.com/browserpass/browserpass-extension">Browserpass</a>, <a href="https://www.raycast.com/capipo/pass">Raycast Pass</a> and <a href="https://github.com/mssun/passforios">Pass - Password Store</a> for iPhone.</p>
     <p><a href="https://github.com/vutran1710/passfuck">Source code</a> and <a href="https://github.com/vutran1710/passfuck-vault">the vault</a> are on GitHub.</p>
   </div>
 </footer>

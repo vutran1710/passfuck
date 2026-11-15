@@ -198,50 +198,85 @@ cmd_sync() {
 }
 
 cmd_import() {
-  local csv="${1:-}"; [ -f "$csv" ] || die "usage: pf import passwords.csv"
+  local csv="${1:-}" rc=0; [ -f "$csv" ] || die "usage: pf import passwords.csv"
   load_conf
-  PF_NO_PUSH=1 python3 - "$csv" "$STORE" <<'PY'
+  has_tty || die "import asks you to name each entry; run it from a terminal"
+  cat <<'EOF'
+Give each entry an alias. Only the alias is visible in the public vault; the
+site, username and password are encrypted inside. Use something you'll recognise
+when searching, e.g. "gh", "bank-main", "work/mail". Press Enter to skip an entry.
+EOF
+  PF_NO_PUSH=1 python3 - "$csv" "$STORE" <<'PY' || rc=$?
 import csv, os, re, subprocess, sys
 from urllib.parse import urlparse
 
 src, store = sys.argv[1], sys.argv[2]
 recipients = open(os.path.join(store, ".gpg-id")).read().split()
 pick = lambda row, *keys: next((row[k] for k in keys if row.get(k)), "")
+tty_in, tty = open("/dev/tty"), open("/dev/tty", "w", buffering=1)
 
-def name_for(url, title):
-    host = urlparse(url if "://" in url else "https://" + url).hostname if url else ""
-    base = re.sub(r"^www\.", "", host or title or "unnamed").lower()
-    return re.sub(r"[^a-z0-9._@-]+", "-", base).strip("-") or "unnamed"
+def ask(prompt):
+    tty.write(prompt); tty.flush()
+    return tty_in.readline().strip()
 
-n = 0
+def clean(alias):  # pass entry name: letters, digits, . _ - @, and / for folders
+    alias = re.sub(r"\s+", "-", alias)
+    alias = re.sub(r"[^A-Za-z0-9._@/-]+", "", alias)
+    return "/".join(p for p in alias.split("/") if p not in ("", ".", ".."))
+
+rows = []
 with open(src, newline="", encoding="utf-8-sig") as f:
     for raw in csv.DictReader(f):
         row = {(k or "").strip().lower(): (v or "").strip() for k, v in raw.items()}
-        pw = pick(row, "password", "login_password")
-        if not pw:
+        if pick(row, "password", "login_password"):
+            rows.append(row)
+
+done = skipped = 0
+for i, row in enumerate(rows, 1):
+    url = pick(row, "url", "login_uri", "website")
+    user = pick(row, "username", "login_username", "login")
+    site = (urlparse(url if "://" in url else "https://" + url).hostname or "") if url else ""
+    label = site or pick(row, "title", "name") or "(no site)"
+    tty.write(f"\n[{i}/{len(rows)}] {label}" + (f"  (login: {user})" if user else "") + "\n")
+    while True:
+        alias = clean(ask("  alias: "))
+        if not alias:
+            break
+        path = os.path.join(store, alias + ".gpg")
+        if os.path.exists(path):
+            tty.write(f"  '{alias}' is already used, pick another\n")
             continue
-        url = pick(row, "url", "login_uri", "website")
-        name = name_for(url, pick(row, "title", "name"))
-        path, i = os.path.join(store, name + ".gpg"), 2
-        while os.path.exists(path):
-            path, i = os.path.join(store, f"{name}-{i}.gpg"), i + 1
-        lines = [pw]
-        if (u := pick(row, "username", "login_username", "login")): lines.append(f"login: {u}")
-        if url: lines.append(f"url: {url}")
-        if (o := pick(row, "otpauth")): lines.append(o)
-        if (note := pick(row, "notes", "note", "comment")): lines.append(note)
-        args = ["gpg", "--batch", "--yes", "-e", "-o", path]
-        for r in recipients:
-            args += ["-r", r]
-        subprocess.run(args, input="\n".join(lines).encode(), check=True)
-        n += 1
-print(f"imported {n} entries")
+        break
+    if not alias:
+        skipped += 1
+        continue
+    lines = [pick(row, "password", "login_password")]
+    if user: lines.append(f"login: {user}")
+    if url: lines.append(f"url: {url}")
+    if (o := pick(row, "otpauth")): lines.append(o)
+    if (note := pick(row, "notes", "note", "comment")): lines.append(note)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    args = ["gpg", "--batch", "--yes", "-e", "-o", path]
+    for r in recipients:
+        args += ["-r", r]
+    subprocess.run(args, input="\n".join(lines).encode(), check=True)
+    done += 1
+
+print(f"\nimported {done}, skipped {skipped}")
+sys.exit(10 if skipped else 0)
 PY
-  git -C "$STORE" add -A -- '*.gpg'
-  PF_NO_PUSH=1 git -C "$STORE" commit -qm "pf: import $(basename "$csv")"
-  "$PF_DIR/pf" sync || warn "push failed; will retry on next sync"
+  [ "$rc" = 0 ] || [ "$rc" = 10 ] || die "import failed"
+  if [ -n "$(git -C "$STORE" status --porcelain -- '*.gpg')" ]; then
+    git -C "$STORE" add -A -- '*.gpg'
+    PF_NO_PUSH=1 git -C "$STORE" commit -qm "Add entries"
+    "$PF_DIR/pf" sync || warn "push failed; will retry on next sync"
+  fi
+  if [ "$rc" = 10 ]; then
+    warn "Skipped entries are still only in $csv. Re-run 'pf import' for them, then delete it: rm -P '$csv'"
+    return
+  fi
   local yn
-  has_tty && read -rp "Securely delete $csv now? (it has every password in plain text) [Y/n] " yn </dev/tty || yn=n
+  read -rp "Securely delete $csv now? (it has every password in plain text) [Y/n] " yn </dev/tty || yn=n
   case "$yn" in n|N) warn "Delete it yourself soon: rm -P '$csv'";; *) rm -P "$csv" && say "Deleted $csv";; esac
 }
 
@@ -258,11 +293,20 @@ cmd_phone() {
     gh repo deploy-key add "$out/3-ssh-key.pub" --allow-write -t "iPhone (passfuck)" -R "$slug"
   fi
   cat > "$out/README.txt" <<EOF
-Pass for iOS (App Store) -> Settings
-  Git server:  git@github.com:$slug.git   branch: main   user: git   auth: SSH key -> 3-ssh-key
-  PGP key:     1-public-key.asc + 2-private-key.asc  (passphrase = your master phrase)
-  Then: iOS Settings -> General -> AutoFill & Passwords -> enable "Pass".
-DELETE THIS FOLDER (and the copy on the phone's Files app) once imported.
+iPhone setup for "Pass - Password Store" (free, App Store)
+
+1. Settings -> PGP Key -> Import from Files: pick 1-public-key.asc, then 2-private-key.asc.
+   Passphrase = your master phrase. Choose to remember it (stays in the iPhone Keychain).
+2. Settings -> SSH Key -> Import from Files: pick 3-ssh-key.
+3. Settings -> Password Repository:
+     Git repository URL:  ssh://git@github.com/$slug.git
+     Branch:              main
+     Username:            git
+     Authentication:      SSH Key
+   Save; it downloads your vault.
+4. iPhone Settings -> General -> AutoFill & Passwords -> turn on "Pass".
+
+Then delete this folder from the iPhone (Files app) and from the Mac.
 EOF
   open "$out"
   say "AirDrop the folder to your iPhone, follow README.txt, then: rm -rf '$out'"
