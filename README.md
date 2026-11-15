@@ -15,9 +15,10 @@ Built entirely from existing tools: [`pass`](https://www.passwordstore.org/) ·
 ## Setup (first time, or any new Mac)
 
 ```sh
-git clone https://github.com/vutran1710/passfuck ~/.passfuck
-~/.passfuck/pf
+curl -fsSL https://vutran1710.github.io/passfuck/install | bash
 ```
+
+Website: <https://vutran1710.github.io/passfuck/>. After installing, `pf` is on your PATH.
 
 `pf` with no arguments is a wizard: master phrase → this Mac → browser extension →
 Raycast → import existing passwords → iPhone. Safe to re-run; done steps are skipped.
