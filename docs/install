@@ -1,0 +1,34 @@
+#!/bin/bash
+# passfuck installer
+#   curl -fsSL https://vutran1710.github.io/passfuck/install | bash
+# Installs Homebrew if missing, fetches the tool to ~/.passfuck, puts `pf` on
+# your PATH and starts the setup wizard. Safe to re-run.
+
+# Everything is inside main() so a half-downloaded script never runs.
+main() {
+  set -euo pipefail
+  local repo="https://github.com/vutran1710/passfuck" dir="${PF_HOME:-$HOME/.passfuck}"
+
+  [ "$(uname)" = Darwin ] || { echo "passfuck currently supports macOS only." >&2; exit 1; }
+  (exec </dev/tty) 2>/dev/null || { echo "Run this from a terminal; setup asks you questions." >&2; exit 1; }
+
+  if ! command -v brew >/dev/null 2>&1; then
+    echo "==> Installing Homebrew first (it will ask for your Mac password)"
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" </dev/tty
+  fi
+  eval "$( { /opt/homebrew/bin/brew shellenv || /usr/local/bin/brew shellenv; } 2>/dev/null)"
+
+  if [ -d "$dir/.git" ]; then
+    echo "==> Updating $dir"
+    git -C "$dir" pull -q --ff-only
+  else
+    echo "==> Downloading passfuck to $dir"
+    git clone -q "$repo" "$dir"
+  fi
+  ln -sf "$dir/pf" "$(brew --prefix)/bin/pf"
+  echo "==> Installed. Run 'pf' any time to re-open setup."
+
+  exec "$dir/pf" </dev/tty
+}
+
+main "$@"

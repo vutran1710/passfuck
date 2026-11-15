@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>passfuck: one phrase, every password</title>
+<meta name="description" content="A free password manager for Mac and iPhone. Remember one phrase; your passwords live encrypted in your own GitHub repo.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='none' stroke='%23a4245c' stroke-width='3'/%3E%3Ccircle cx='16' cy='16' r='5' fill='%231d3557'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Schibsted+Grotesk:ital,wght@0,400;0,500;0,700;0,800;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #e9efee;
+    --ink: #1d3557;
+    --ink-soft: #4a5f78;
+    --line: #9fb3b9;
+    --security: #a4245c;
+    --white: #ffffff;
+    --measure: 68ch;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font: 400 1.0625rem/1.6 "Schibsted Grotesk", system-ui, sans-serif;
+  }
+  a { color: var(--ink); text-decoration-color: var(--line); text-underline-offset: 3px; text-decoration-thickness: 1px; }
+  a:hover { text-decoration-color: var(--security); }
+  :focus-visible { outline: 2px solid var(--security); outline-offset: 3px; border-radius: 2px; }
+
+  .wrap { max-width: 64rem; margin: 0 auto; padding: 0 1.5rem; }
+
+  /* Hero: the rosette is the one loud thing on the page */
+  .hero { position: relative; padding: 7rem 0 5rem; overflow: hidden; }
+  .rosette {
+    position: absolute; right: -5rem; top: 50%; translate: 0 -50%;
+    width: min(34rem, 110vw); aspect-ratio: 1; pointer-events: none;
+  }
+  .rosette path { fill: none; stroke: var(--ink); stroke-width: .55; opacity: .32; }
+  .rosette path.accent { stroke: var(--security); opacity: .55; stroke-width: .7; }
+  .hero-text { position: relative; }
+  .hero-text > :not(.cmd) { max-width: 38rem; }
+  h1 {
+    margin: 0; font-weight: 800; letter-spacing: -.045em; line-height: .9;
+    font-size: clamp(3.5rem, 11vw, 7.5rem);
+  }
+  .lede { margin: 1.25rem 0 2.5rem; font-size: clamp(1.25rem, 2.6vw, 1.6rem); line-height: 1.35; max-width: 30ch; color: var(--ink); }
+
+  .cmd {
+    display: flex; align-items: stretch; background: var(--white);
+    border: 1px solid var(--ink); border-radius: 6px; width: max-content; max-width: 100%;
+    box-shadow: 4px 4px 0 var(--ink);
+  }
+  .cmd code {
+    flex: 1; min-width: 0; padding: 1rem 1.1rem; overflow-x: auto; white-space: nowrap;
+    font: 500 .9rem/1.4 "IBM Plex Mono", ui-monospace, monospace; color: var(--ink);
+  }
+  .cmd code::before { content: "$ "; color: var(--line); }
+  .cmd button {
+    font: 700 .95rem "Schibsted Grotesk", sans-serif; color: var(--white); background: var(--ink);
+    border: 0; border-left: 1px solid var(--ink); padding: 0 1.25rem; cursor: pointer;
+    border-radius: 0 5px 5px 0; min-width: 6.5rem;
+  }
+  .cmd button:hover { background: var(--security); }
+  .hint { margin: 1rem 0 0; font-size: .95rem; color: var(--ink-soft); max-width: 40rem; }
+
+  /* Body sections */
+  section { padding: 4rem 0; border-top: 1px solid var(--line); }
+  h2 { font-size: 1.75rem; letter-spacing: -.02em; line-height: 1.2; margin: 0 0 1.5rem; font-weight: 700; }
+  p { max-width: var(--measure); margin: 0 0 1rem; }
+
+  ol.steps { list-style: none; margin: 0; padding: 0; counter-reset: s; display: grid; gap: 2rem; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); }
+  ol.steps li { counter-increment: s; }
+  ol.steps li::before {
+    content: counter(s); display: block; font-weight: 800; font-size: 2.75rem; line-height: 1;
+    color: var(--security); margin-bottom: .6rem; letter-spacing: -.04em;
+  }
+  ol.steps strong { display: block; font-size: 1.15rem; margin-bottom: .3rem; }
+  ol.steps span { color: var(--ink-soft); }
+
+  dl.places { margin: 0; max-width: 46rem; }
+  .place { display: grid; grid-template-columns: 11rem 1fr; gap: 1rem; padding: .9rem 0; border-bottom: 1px dashed var(--line); }
+  .place:last-child { border-bottom: 0; }
+  dt { font-weight: 700; }
+  dd { margin: 0; color: var(--ink-soft); }
+  kbd, .place code { font: 500 .9em "IBM Plex Mono", monospace; color: var(--ink); }
+
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 2.5rem; max-width: 52rem; margin-bottom: 2rem; }
+  .split h3 { font-size: 1.1rem; margin: 0 0 .5rem; }
+  .split ul { margin: 0; padding-left: 1.1rem; color: var(--ink-soft); }
+  .split li { margin-bottom: .3rem; }
+  .split .private h3 { color: var(--security); }
+
+  .rules { margin: 0 0 1.5rem; padding-left: 1.1rem; max-width: var(--measure); }
+  .rules li { margin-bottom: .4rem; }
+  .example {
+    max-width: 40rem; padding: 1.25rem 1.5rem; background: var(--white); border-left: 3px solid var(--security);
+    font-size: 1.2rem; font-style: italic;
+  }
+  .example small { display: block; font-style: normal; font-size: .9rem; color: var(--ink-soft); margin-top: .4rem; }
+
+  footer .wrap { border-top: 1px solid var(--line); padding-top: 2.5rem; }
+  footer { padding: 0 0 4rem; color: var(--ink-soft); font-size: .95rem; }
+  footer p { max-width: none; }
+
+  @media (max-width: 640px) {
+    .hero { padding: 4rem 0 3rem; }
+    .rosette { right: -45%; top: 1rem; translate: 0 0; width: 22rem; opacity: .6; }
+    .cmd { width: auto; }
+    .cmd code { white-space: normal; word-break: break-all; }
+    .cmd { flex-direction: column; }
+    .cmd button { border-left: 0; border-top: 1px solid var(--ink); border-radius: 0 0 5px 5px; padding: .8rem; }
+    .place, .split { grid-template-columns: 1fr; gap: .25rem; }
+    .split { gap: 2rem; }
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <svg class="rosette" viewBox="-200 -200 400 400" aria-hidden="true"></svg>
+  <div class="wrap">
+    <div class="hero-text">
+      <h1>passfuck</h1>
+      <p class="lede">Remember one phrase. Get every password on your Mac and iPhone.</p>
+      <div class="cmd">
+        <code id="cmd">curl -fsSL https://vutran1710.github.io/passfuck/install | bash</code>
+        <button type="button" id="copy">Copy</button>
+      </div>
+      <p class="hint">Paste it into Terminal on your Mac. A guided setup takes about ten minutes.
+        <a href="install">Read the script</a> before you run it.</p>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section>
+    <h2>How it works</h2>
+    <ol class="steps">
+      <li><strong>You invent one phrase</strong><span>It's the only thing you ever need to remember.</span></li>
+      <li><strong>It becomes your key</strong><span>The same phrase makes the same key on any machine, so there's no key file to lose.</span></li>
+      <li><strong>Passwords live in your repo</strong><span>Each one is encrypted and stored on your own GitHub, which any device can download.</span></li>
+      <li><strong>Your devices fill them in</strong><span>Mac and iPhone read from the repo, and every change syncs back to it.</span></li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>Where you use it</h2>
+    <dl class="places">
+      <div class="place"><dt>In the browser</dt><dd>Click the Browserpass button in Brave or Chrome to fill the login.</dd></div>
+      <div class="place"><dt>In any Mac app</dt><dd>Open Raycast, type a few letters of the site, and copy or paste the password. This works even in apps that hide their login fields.</dd></div>
+      <div class="place"><dt>On iPhone</dt><dd>Pick it from AutoFill above the keyboard, or open the Pass app, search and tap to copy.</dd></div>
+      <div class="place"><dt>In Terminal</dt><dd><code>pass -c github.com</code> copies a password. <code>pass generate newsite.com 24</code> makes a new one.</dd></div>
+    </dl>
+  </section>
+
+  <section>
+    <h2>What's public and what isn't</h2>
+    <div class="split">
+      <div>
+        <h3>Anyone can see</h3>
+        <ul>
+          <li>Which sites you have accounts on, from the file names</li>
+          <li>When each entry was added or changed</li>
+          <li>The name and email used to make your key</li>
+        </ul>
+      </div>
+      <div class="private">
+        <h3>Only you can read</h3>
+        <ul>
+          <li>Passwords</li>
+          <li>Usernames and emails for each site</li>
+          <li>Notes and one-time codes</li>
+        </ul>
+      </div>
+    </div>
+    <p>Because the repo is public, anyone can download it and try to guess your phrase on their own computers. Each guess costs them about ten seconds and a gigabyte of memory. That stops casual attempts, but a long-running attacker could still try billions, so the phrase itself has to be strong.</p>
+  </section>
+
+  <section>
+    <h2>Choosing your phrase</h2>
+    <ul class="rules">
+      <li>Use at least six or seven words.</li>
+      <li>Make it a sentence only you would come up with. Never use a lyric, quote or saying.</li>
+      <li>Leave out pet names, birthdays and addresses.</li>
+      <li>Type it exactly the same way every time, including capitals and spaces.</li>
+      <li>Write it on paper and keep it somewhere safe. If you lose it, nobody can recover your passwords.</li>
+    </ul>
+    <div class="example">my purple fridge argues with hanoi taxis at 3am
+      <small>This is the kind of sentence to aim for. Don't use this one; it's published here.</small></div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Built from free, open-source tools: <a href="https://www.passwordstore.org/">pass</a>, <a href="https://github.com/skeeto/passphrase2pgp">passphrase2pgp</a>, <a href="https://github.com/browserpass/browserpass-extension">Browserpass</a>, <a href="https://www.raycast.com/capipo/pass">Raycast Pass</a> and <a href="https://github.com/mssun/passforios">Pass for iOS</a>.</p>
+    <p><a href="https://github.com/vutran1710/passfuck">Source code</a> and <a href="https://github.com/vutran1710/passfuck-vault">the vault</a> are on GitHub.</p>
+  </div>
+</footer>
+
+<script>
+  // Copy button
+  const btn = document.getElementById('copy');
+  btn.addEventListener('click', async () => {
+    await navigator.clipboard.writeText(document.getElementById('cmd').textContent);
+    btn.textContent = 'Copied';
+    setTimeout(() => (btn.textContent = 'Copy'), 1800);
+  });
+
+  // Guilloché rosette, the fine-line pattern printed on banknotes and cheques
+  const svg = document.querySelector('.rosette');
+  const ns = 'http://www.w3.org/2000/svg';
+  const curve = (R, r, d, scale, turn, steps = 2400) => {
+    // hypotrochoid, closed after r / gcd(R, r) turns
+    const gcd = (a, b) => (b ? gcd(b, a % b) : a);
+    const loops = r / gcd(R, r), pts = [];
+    for (let i = 0; i <= steps; i++) {
+      const t = (i / steps) * 2 * Math.PI * loops;
+      const x = (R - r) * Math.cos(t) + d * Math.cos(((R - r) / r) * t);
+      const y = (R - r) * Math.sin(t) - d * Math.sin(((R - r) / r) * t);
+      const c = Math.cos(turn), s = Math.sin(turn);
+      pts.push(((x * c - y * s) * scale).toFixed(2) + ',' + ((x * s + y * c) * scale).toFixed(2));
+    }
+    return 'M' + pts.join('L');
+  };
+  const layers = [
+    [96, 36, 74, 1.42, 0], [96, 36, 74, 1.42, 0.06], [96, 36, 74, 1.42, 0.12],
+    [80, 22, 46, 1.6, 0], [80, 22, 46, 1.6, 0.09],
+    [60, 25, 50, 1.25, 0.2, 'accent'],
+    [50, 18, 30, 1.1, 0], [50, 18, 30, 1.1, 0.15],
+    [30, 12, 20, 0.95, 0],
+  ];
+  const paths = layers.map(([R, r, d, k, turn, cls]) => {
+    const p = document.createElementNS(ns, 'path');
+    p.setAttribute('d', curve(R, r, d, k, turn));
+    if (cls) p.setAttribute('class', cls);
+    svg.appendChild(p);
+    return p;
+  });
+
+  // One orchestrated moment: the rosette draws itself once on load
+  if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    paths.forEach((p, i) => {
+      const len = p.getTotalLength();
+      p.style.strokeDasharray = len;
+      p.style.strokeDashoffset = len;
+      p.animate([{ strokeDashoffset: len }, { strokeDashoffset: 0 }],
+        { duration: 2600, delay: i * 140, easing: 'cubic-bezier(.5,0,.2,1)', fill: 'forwards' });
+    });
+  }
+</script>
+</body>
+</html>

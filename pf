@@ -53,9 +53,9 @@ key_fpr() {  # fingerprint of the key for uid $1
 }
 
 deps() {
-  say "Installing tools (gnupg, pass, pinentry-mac, passphrase2pgp)..."
+  say "Installing tools (gnupg, pass, pinentry-mac, gh, passphrase2pgp)..."
   local missing=()
-  for f in gnupg pass pinentry-mac go; do brew list --formula "$f" >/dev/null 2>&1 || missing+=("$f"); done
+  for f in gnupg pass pinentry-mac go gh; do brew list --formula "$f" >/dev/null 2>&1 || missing+=("$f"); done
   [ ${#missing[@]} -eq 0 ] || brew install "${missing[@]}"
   [ -x "$P2P" ] || go install nullprogram.com/x/passphrase2pgp@latest
 }
@@ -118,6 +118,12 @@ cmd_setup() {
     read_phrase "Master phrase"
     import_key "$PF_UID" "$PF_KEYID"
     echo "$PF_KEYID:6:" | gpg --import-ownertrust 2>/dev/null
+  fi
+
+  # Pushing to the vault goes through the GitHub CLI login.
+  if ! gh auth status >/dev/null 2>&1; then
+    say "Log in to GitHub so changes can be pushed to the vault"
+    gh auth login -h github.com -p https -w </dev/tty
   fi
 
   # The vault goes in ~/.password-store: where Browserpass, Raycast and `pass` look.
