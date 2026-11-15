@@ -1,0 +1,267 @@
+#!/usr/bin/env bash
+# pf — one phrase you remember -> the same GPG key on every machine -> a `pass`
+# vault in its own public git repo (only encrypted entries; this tool lives elsewhere).
+#
+#   pf init           first time, or change your phrase (re-encrypts everything)
+#   pf setup          set up this machine (keys, browser, sync); run on every new Mac
+#   pf import FILE    import a passwords CSV (Chrome / Brave / Safari / Apple / Firefox / 1Password)
+#   pf phone          export what the iPhone app needs (for AirDrop)
+#   pf sync           pull + push now (also runs automatically)
+set -euo pipefail
+
+export PATH="/opt/homebrew/bin:/usr/local/bin:$HOME/go/bin:$PATH"
+PF_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+CONF="$PF_DIR/pf.conf"   # PF_UID (the key's salt), PF_KEYID, PF_VAULT (vault git URL)
+P2P="$(go env GOPATH 2>/dev/null || echo "$HOME/go")/bin/passphrase2pgp"
+STORE="${PASSWORD_STORE_DIR:-$HOME/.password-store}"
+export PASSWORD_STORE_DIR="$STORE"
+
+say()  { printf '\033[1;32m==>\033[0m %s\n' "$*"; }
+warn() { printf '\033[1;33m!!\033[0m %s\n' "$*" >&2; }
+die()  { printf '\033[1;31mxx\033[0m %s\n' "$*" >&2; exit 1; }
+
+load_conf() { [ -f "$CONF" ] || die "no $CONF — run 'pf init' first"; . "$CONF"; }
+
+# Read the phrase without echo. PF_PHRASE_FILE exists for automated tests only.
+read_phrase() {  # $1 = prompt, $2 = "confirm" to ask twice
+  if [ -n "${PF_PHRASE_FILE:-}" ]; then PHRASE="$(cat "$PF_PHRASE_FILE")"; return; fi
+  local again
+  read -rsp "$1: " PHRASE </dev/tty; echo >&2
+  if [ "${2:-}" = confirm ]; then
+    read -rsp "Type it again: " again </dev/tty; echo >&2
+    [ "$PHRASE" = "$again" ] || die "phrases don't match"
+  fi
+  [ -n "$PHRASE" ] || die "empty phrase"
+}
+
+# Derive the key from the phrase and import it into gpg, protected by the same phrase.
+# Process substitution keeps the phrase in pipes, never on disk.
+import_key() {  # $1 = uid, $2 = key id to check against (optional)
+  local check=()
+  [ -n "${2:-}" ] && check=(-c "$2")
+  say "Deriving key from phrase (takes ~10s on purpose — that's what makes guessing slow)..."
+  "$P2P" -u "$1" -s -e ${check[@]+"${check[@]}"} -i <(printf '%s' "$PHRASE") |
+    gpg --batch --pinentry-mode loopback --passphrase-fd 3 --import 3< <(printf '%s\n' "$PHRASE") 2>/dev/null \
+    || die "key derivation/import failed (wrong phrase?)"
+}
+
+key_fpr() {  # fingerprint of the key for uid $1
+  gpg --with-colons --fingerprint "=$1" 2>/dev/null | awk -F: '$1=="fpr"{print $10; exit}'
+}
+
+deps() {
+  say "Installing tools (gnupg, pass, pinentry-mac, passphrase2pgp)..."
+  local missing=()
+  for f in gnupg pass pinentry-mac go; do brew list --formula "$f" >/dev/null 2>&1 || missing+=("$f"); done
+  [ ${#missing[@]} -eq 0 ] || brew install "${missing[@]}"
+  [ -x "$P2P" ] || go install nullprogram.com/x/passphrase2pgp@latest
+}
+
+cmd_init() {
+  deps
+  local uid old_fpr="" fpr
+  if [ -f "$CONF" ]; then . "$CONF"; old_fpr="$PF_KEYID"; fi
+  read -rp "Your name <email> [${PF_UID:-}]: " uid </dev/tty 2>/dev/null || true
+  uid="${uid:-${PF_UID:-}}"; [ -n "$uid" ] || die "need a name <email>"
+  cat >&2 <<'EOF'
+
+Choose your master phrase. It is the ONLY thing protecting a public vault:
+  - 6+ words / 30+ characters, a sentence only you would invent
+  - not a lyric, quote, saying, or anything about you
+  - type it EXACTLY the same every time (case, spaces, punctuation)
+  - write it on paper; lose it = lose everything
+
+EOF
+  read_phrase "New master phrase" confirm
+  [ ${#PHRASE} -ge 20 ] || [ -n "${PF_PHRASE_FILE:-}" ] || die "too short (${#PHRASE} chars) — go longer"
+  import_key "$uid"
+  fpr="$(key_fpr "$uid")"; [ -n "$fpr" ] || die "could not find imported key"
+  echo "$fpr:6:" | gpg --import-ownertrust 2>/dev/null
+
+  [ -d "$STORE/.git" ] || git init -qb main "$STORE"
+  say "Key: $fpr"
+  say "Encrypting vault to the new key (re-encrypts existing entries)..."
+  pass init "$fpr" >/dev/null
+  printf 'PF_UID=%q\nPF_KEYID=%q\nPF_VAULT=%q\n' "$uid" "$fpr" \
+    "$(git -C "$STORE" remote get-url origin 2>/dev/null || echo "${PF_VAULT:-}")" > "$CONF"
+  git -C "$PF_DIR" add pf.conf
+  git -C "$PF_DIR" commit -qm "pf: vault key $fpr" >/dev/null || true
+  git -C "$PF_DIR" push -q 2>/dev/null || warn "push the tool repo yourself so new machines get pf.conf"
+  if [ -n "$old_fpr" ] && [ "$old_fpr" != "$fpr" ]; then
+    gpg --batch --yes --delete-secret-and-public-key "$old_fpr" 2>/dev/null || true
+    say "Removed old key $old_fpr from this machine"
+    warn "Other devices (iPhone!) still have the old key: run 'pf setup' / 'pf phone' there again."
+  fi
+  say "Done. Next: pf setup"
+}
+
+cmd_setup() {
+  deps
+  load_conf
+  mkdir -m 700 -p "${GNUPGHOME:-$HOME/.gnupg}"
+  local agent="${GNUPGHOME:-$HOME/.gnupg}/gpg-agent.conf"
+  if ! grep -q pinentry-mac "$agent" 2>/dev/null; then
+    { echo "pinentry-program $(brew --prefix)/bin/pinentry-mac"
+      echo "default-cache-ttl 3600"
+      echo "max-cache-ttl 28800"; } >> "$agent"
+    gpgconf --kill gpg-agent
+  fi
+
+  if gpg --list-secret-keys "$PF_KEYID" >/dev/null 2>&1; then
+    say "Key already on this machine"
+  else
+    read_phrase "Master phrase"
+    import_key "$PF_UID" "$PF_KEYID"
+    echo "$PF_KEYID:6:" | gpg --import-ownertrust 2>/dev/null
+  fi
+
+  # The vault goes in ~/.password-store: where Browserpass, Raycast and `pass` look.
+  if [ ! -d "$STORE/.git" ]; then
+    [ -n "${PF_VAULT:-}" ] || die "PF_VAULT not set in $CONF"
+    say "Cloning vault $PF_VAULT -> $STORE"
+    git clone -q "$PF_VAULT" "$STORE"
+  fi
+
+  # Auto-push after every commit; pass commits on every change.
+  git -C "$STORE" config credential.https://github.com.helper '!gh auth git-credential'
+  cat > "$STORE/.git/hooks/post-commit" <<EOF
+#!/bin/sh
+[ -n "\$PF_NO_PUSH" ] || nohup "$PF_DIR/pf" sync >/dev/null 2>&1 &
+EOF
+  chmod +x "$STORE/.git/hooks/post-commit"
+
+  [ "$(uname)" = Darwin ] && { setup_browserpass; setup_sync_agent; }
+  say "This machine is ready. Try: pass ls"
+}
+
+setup_browserpass() {
+  local ver=3.1.2 dir="$HOME/.local/share/passfuck/browserpass" arch
+  arch=$([ "$(uname -m)" = arm64 ] && echo darwin-arm64 || echo darwin64)
+  if [ ! -x "$dir/browserpass" ]; then
+    say "Installing Browserpass native host $ver..."
+    mkdir -p "$dir"
+    curl -fsSL "https://github.com/browserpass/browserpass-native/releases/download/v$ver/browserpass-$arch-$ver.tar.gz" |
+      tar xz -C "$dir" --strip-components 1
+    mv "$dir/browserpass-$arch" "$dir/browserpass"
+  fi
+  # Browsers launch the host with a bare PATH; the wrapper lets it find gpg.
+  printf '#!/bin/sh\nexport PATH="%s:$PATH"\nexec "%s/browserpass" "$@"\n' "$(brew --prefix)/bin" "$dir" > "$dir/host"
+  chmod +x "$dir/host"
+  sed "s|\"path\": \".*\"|\"path\": \"$dir/host\"|" "$dir/browser-files/chromium-host.json" > "$dir/host.json"
+  local b
+  for b in "Google/Chrome" "BraveSoftware/Brave-Browser"; do
+    mkdir -p "$HOME/Library/Application Support/$b/NativeMessagingHosts"
+    ln -sf "$dir/host.json" "$HOME/Library/Application Support/$b/NativeMessagingHosts/com.github.browserpass.native.json"
+  done
+}
+
+setup_sync_agent() {
+  local plist="$HOME/Library/LaunchAgents/io.passfuck.sync.plist"
+  cat > "$plist" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>io.passfuck.sync</string>
+  <key>ProgramArguments</key><array><string>$PF_DIR/pf</string><string>sync</string></array>
+  <key>StartInterval</key><integer>600</integer>
+  <key>RunAtLoad</key><true/>
+  <key>StandardErrorPath</key><string>$STORE/.git/pf-sync.log</string>
+</dict></plist>
+EOF
+  launchctl bootout "gui/$(id -u)/io.passfuck.sync" 2>/dev/null || true
+  launchctl bootstrap "gui/$(id -u)" "$plist"
+  say "Background sync every 10 min (log: $STORE/.git/pf-sync.log)"
+}
+
+cmd_sync() {
+  cd "$STORE"
+  git remote get-url origin >/dev/null 2>&1 || exit 0
+  # one sync at a time (commit hook, background job and manual runs can overlap)
+  mkdir .git/pf-sync.lock 2>/dev/null || { sleep 5; mkdir .git/pf-sync.lock 2>/dev/null; } || exit 0
+  trap 'rmdir .git/pf-sync.lock' EXIT
+  if ! git pull -q --rebase --autostash origin main; then
+    git rebase --abort 2>/dev/null || true
+    die "$(date): sync conflict — resolve manually in $STORE"
+  fi
+  git push -q origin HEAD:main
+}
+
+cmd_import() {
+  local csv="${1:-}"; [ -f "$csv" ] || die "usage: pf import passwords.csv"
+  load_conf
+  PF_NO_PUSH=1 python3 - "$csv" "$STORE" <<'PY'
+import csv, os, re, subprocess, sys
+from urllib.parse import urlparse
+
+src, store = sys.argv[1], sys.argv[2]
+recipients = open(os.path.join(store, ".gpg-id")).read().split()
+pick = lambda row, *keys: next((row[k] for k in keys if row.get(k)), "")
+
+def name_for(url, title):
+    host = urlparse(url if "://" in url else "https://" + url).hostname if url else ""
+    base = re.sub(r"^www\.", "", host or title or "unnamed").lower()
+    return re.sub(r"[^a-z0-9._@-]+", "-", base).strip("-") or "unnamed"
+
+n = 0
+with open(src, newline="", encoding="utf-8-sig") as f:
+    for raw in csv.DictReader(f):
+        row = {(k or "").strip().lower(): (v or "").strip() for k, v in raw.items()}
+        pw = pick(row, "password", "login_password")
+        if not pw:
+            continue
+        url = pick(row, "url", "login_uri", "website")
+        name = name_for(url, pick(row, "title", "name"))
+        path, i = os.path.join(store, name + ".gpg"), 2
+        while os.path.exists(path):
+            path, i = os.path.join(store, f"{name}-{i}.gpg"), i + 1
+        lines = [pw]
+        if (u := pick(row, "username", "login_username", "login")): lines.append(f"login: {u}")
+        if url: lines.append(f"url: {url}")
+        if (o := pick(row, "otpauth")): lines.append(o)
+        if (note := pick(row, "notes", "note", "comment")): lines.append(note)
+        args = ["gpg", "--batch", "--yes", "-e", "-o", path]
+        for r in recipients:
+            args += ["-r", r]
+        subprocess.run(args, input="\n".join(lines).encode(), check=True)
+        n += 1
+print(f"imported {n} entries")
+PY
+  git -C "$STORE" add -A -- '*.gpg'
+  PF_NO_PUSH=1 git -C "$STORE" commit -qm "pf: import $(basename "$csv")"
+  "$PF_DIR/pf" sync || warn "push failed; will retry on next sync"
+  local yn
+  read -rp "Securely delete $csv now? (it has every password in plain text) [Y/n] " yn </dev/tty 2>/dev/null || yn=n
+  case "$yn" in n|N) warn "Delete it yourself soon: rm -P '$csv'";; *) rm -P "$csv" && say "Deleted $csv";; esac
+}
+
+cmd_phone() {
+  load_conf
+  local out="$HOME/Desktop/passfuck-for-iphone" slug
+  slug="$(cd "$STORE" && gh repo view --json nameWithOwner -q .nameWithOwner)"
+  mkdir -m 700 -p "$out"
+  gpg --armor --export "$PF_KEYID" > "$out/1-public-key.asc"
+  say "Exporting private key — macOS will ask for your phrase"
+  gpg --armor --export-secret-keys "$PF_KEYID" > "$out/2-private-key.asc"
+  if [ ! -f "$out/3-ssh-key" ]; then
+    ssh-keygen -q -t rsa -b 4096 -m PEM -N "" -C "passfuck-iphone" -f "$out/3-ssh-key"
+    gh repo deploy-key add "$out/3-ssh-key.pub" --allow-write -t "iPhone (passfuck)" -R "$slug"
+  fi
+  cat > "$out/README.txt" <<EOF
+Pass for iOS (App Store) -> Settings
+  Git server:  git@github.com:$slug.git   branch: main   user: git   auth: SSH key -> 3-ssh-key
+  PGP key:     1-public-key.asc + 2-private-key.asc  (passphrase = your master phrase)
+  Then: iOS Settings -> General -> AutoFill & Passwords -> enable "Pass".
+DELETE THIS FOLDER (and the copy on the phone's Files app) once imported.
+EOF
+  open "$out"
+  say "AirDrop the folder to your iPhone, follow README.txt, then: rm -rf '$out'"
+}
+
+case "${1:-}" in
+  init)   cmd_init ;;
+  setup)  cmd_setup ;;
+  import) shift; cmd_import "$@" ;;
+  phone)  cmd_phone ;;
+  sync)   cmd_sync ;;
+  *) sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
+esac

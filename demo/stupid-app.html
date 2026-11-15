@@ -1,0 +1,43 @@
+<!doctype html>
+<!-- A deliberately badly-built login: no <form>, no name/id/autocomplete, the
+     "password" box is a text input with CSS dots, the button is a <div>.
+     Browser/iOS autofill can't recognise any of it. -->
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>StupidBank</title>
+<style>
+  body { font-family: -apple-system, sans-serif; background: #f3efe6; display: grid; place-items: center; min-height: 100vh; margin: 0; }
+  .card { background: #fff; padding: 32px; border-radius: 14px; width: 300px; box-shadow: 0 8px 30px #0002; }
+  h1 { margin: 0 0 4px; font-size: 22px; } p { color: #777; margin: 0 0 20px; font-size: 13px; }
+  .lbl { font-size: 12px; color: #555; margin: 10px 0 4px; }
+  input { width: 100%; box-sizing: border-box; padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 15px; }
+  .dots { -webkit-text-security: disc; }
+  .btn { margin-top: 18px; background: #c0392b; color: #fff; text-align: center; padding: 11px; border-radius: 8px; cursor: pointer; font-weight: 600; }
+  .msg { margin-top: 14px; font-size: 14px; min-height: 20px; }
+  .ok { color: #1e8449; } .bad { color: #c0392b; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>🏦 StupidBank</h1>
+    <p>Our login screen ignores every web standard.</p>
+    <div class="lbl">Customer code</div>
+    <input type="text">
+    <div class="lbl">Secret</div>
+    <input type="text" class="dots">
+    <div class="btn">Sign in</div>
+    <div class="msg"></div>
+  </div>
+<script>
+  const [user, pass] = document.querySelectorAll('input');
+  const msg = document.querySelector('.msg');
+  document.querySelector('.btn').onclick = () => {
+    const ok = user.value === 'vu-7731' && pass.value === 'Tr0mbone!Rocket-Mango_42';
+    msg.className = 'msg ' + (ok ? 'ok' : 'bad');
+    msg.textContent = ok ? '✅ Signed in as ' + user.value : '❌ Wrong customer code or secret';
+  };
+</script>
+</body>
+</html>
