@@ -12,14 +12,15 @@ Built entirely from existing tools: [`pass`](https://www.passwordstore.org/) ·
 [Browserpass](https://github.com/browserpass/browserpass-extension) ·
 [Raycast Pass](https://www.raycast.com/) · [Pass for iOS](https://github.com/mssun/passforios).
 
-## New Mac
+## Setup (first time, or any new Mac)
 
 ```sh
 git clone https://github.com/vutran1710/passfuck ~/.passfuck
-~/.passfuck/pf setup        # clones the vault to ~/.password-store, asks for the phrase once
+~/.passfuck/pf
 ```
 
-Then install the Browserpass extension (Chrome / Brave) and Raycast's "Pass" extension.
+`pf` with no arguments is a wizard: master phrase → this Mac → browser extension →
+Raycast → import existing passwords → iPhone. Safe to re-run; done steps are skipped.
 
 ## Daily use
 

@@ -2,6 +2,7 @@
 # pf — one phrase you remember -> the same GPG key on every machine -> a `pass`
 # vault in its own public git repo (only encrypted entries; this tool lives elsewhere).
 #
+#   pf                guided setup wizard (start here)
 #   pf init           first time, or change your phrase (re-encrypts everything)
 #   pf setup          set up this machine (keys, browser, sync); run on every new Mac
 #   pf import FILE    import a passwords CSV (Chrome / Brave / Safari / Apple / Firefox / 1Password)
@@ -19,6 +20,8 @@ export PASSWORD_STORE_DIR="$STORE"
 say()  { printf '\033[1;32m==>\033[0m %s\n' "$*"; }
 warn() { printf '\033[1;33m!!\033[0m %s\n' "$*" >&2; }
 die()  { printf '\033[1;31mxx\033[0m %s\n' "$*" >&2; exit 1; }
+
+has_tty() { (exec </dev/tty) 2>/dev/null; }
 
 load_conf() { [ -f "$CONF" ] || die "no $CONF — run 'pf init' first"; . "$CONF"; }
 
@@ -61,7 +64,9 @@ cmd_init() {
   deps
   local uid old_fpr="" fpr
   if [ -f "$CONF" ]; then . "$CONF"; old_fpr="$PF_KEYID"; fi
-  read -rp "Your name <email> [${PF_UID:-}]: " uid </dev/tty 2>/dev/null || true
+  is_demo && PF_UID=""
+  echo "Your name and email, e.g.  Vu Tran <me@example.com>  (saved in pf.conf; no need to memorise)" >&2
+  has_tty && read -rp "Name <email> [${PF_UID:-}]: " uid </dev/tty || true
   uid="${uid:-${PF_UID:-}}"; [ -n "$uid" ] || die "need a name <email>"
   cat >&2 <<'EOF'
 
@@ -230,7 +235,7 @@ PY
   PF_NO_PUSH=1 git -C "$STORE" commit -qm "pf: import $(basename "$csv")"
   "$PF_DIR/pf" sync || warn "push failed; will retry on next sync"
   local yn
-  read -rp "Securely delete $csv now? (it has every password in plain text) [Y/n] " yn </dev/tty 2>/dev/null || yn=n
+  has_tty && read -rp "Securely delete $csv now? (it has every password in plain text) [Y/n] " yn </dev/tty || yn=n
   case "$yn" in n|N) warn "Delete it yourself soon: rm -P '$csv'";; *) rm -P "$csv" && say "Deleted $csv";; esac
 }
 
@@ -257,7 +262,77 @@ EOF
   say "AirDrop the folder to your iPhone, follow README.txt, then: rm -rf '$out'"
 }
 
+# ---- wizard: `pf` with no arguments walks through everything, skipping what's done
+
+step() { STEP=$((STEP + 1)); printf '\n\033[1;36m[%d/6] %s\033[0m\n' "$STEP" "$1"; }
+ask()  { local a; read -rp "$1 [Y/n] " a </dev/tty; case "$a" in n|N) return 1;; esac; }
+pause() { read -rp "$1 — press Enter when done (or type s to skip) " PAUSE </dev/tty; }
+is_demo() { [ -f "$CONF" ] && grep -q 'demo@example.invalid' "$CONF"; }
+has_key() { [ -f "$CONF" ] && . "$CONF" && gpg --list-secret-keys "$PF_KEYID" >/dev/null 2>&1; }
+
+cmd_wizard() {
+  STEP=0
+  printf '\033[1mpassfuck setup\033[0m — safe to re-run; finished steps are skipped.\n'
+
+  step "Master phrase"
+  if is_demo; then
+    say "Found the demo setup. Removing demo entries and making your real key."
+    local e; for e in github.com github.com-2 stupidbank.example; do
+      [ -f "$STORE/$e.gpg" ] && pass rm -f "$e" >/dev/null
+    done
+    cmd_init
+  elif has_key; then
+    say "Done (key $PF_KEYID for $PF_UID)."
+    ask "Change your phrase?" 2>/dev/null && cmd_init || true
+  else
+    cmd_init
+  fi
+
+  step "This Mac (tools, vault, browser connector, background sync)"
+  cmd_setup
+
+  step "Browser autofill: Browserpass extension"
+  local url="https://chromewebstore.google.com/detail/browserpass/naepdomgkenhinolocfifgehidddafch" b
+  for b in "Brave Browser" "Google Chrome"; do
+    [ -d "/Applications/$b.app" ] && ask "Open the Browserpass page in $b?" && open -a "$b" "$url" &&
+      pause "Click 'Add to $( [ "$b" = "Brave Browser" ] && echo Brave || echo Chrome )'" || true
+  done
+
+  step "Any Mac app: Raycast + its Pass extension"
+  if [ ! -d /Applications/Raycast.app ]; then
+    ask "Install Raycast (free launcher, Cmd+Space replacement)?" && brew install --cask raycast && open -a Raycast || true
+  fi
+  if [ -d /Applications/Raycast.app ]; then
+    ask "Open the Pass extension in Raycast?" && open "raycast://extensions/capipo/pass" &&
+      pause "Click Install, then try: Raycast -> 'Find in Pass'" || true
+  fi
+
+  step "Bring in your existing passwords"
+  cat <<'EOF'
+  Export a CSV from wherever they live now:
+    Brave:   brave://password-manager/settings  -> Export passwords
+    Chrome:  chrome://password-manager/settings -> Export passwords
+    Apple:   Passwords app -> File -> Export All Passwords...
+  Repeat this step for each source.
+EOF
+  local csv
+  while read -rp "Path to CSV (drag the file here, or Enter to skip): " csv </dev/tty && [ -n "$csv" ]; do
+    csv="${csv%\'}"; csv="${csv#\'}"; csv="${csv% }"; csv="${csv//\\ / }"
+    [ -f "$csv" ] && cmd_import "$csv" || warn "not a file: $csv"
+  done
+
+  step "iPhone: Pass for iOS"
+  if ask "Set up the iPhone now? (install 'Pass - Password Store' from the App Store first)"; then
+    cmd_phone
+    pause "AirDrop the folder, follow its README.txt on the phone"
+    rm -rf "$HOME/Desktop/passfuck-for-iphone" && say "Deleted the key folder from the Desktop"
+  fi
+
+  printf '\n\033[1;32mAll set.\033[0m Your phrase is the only thing to remember. Re-run `pf` any time.\n'
+}
+
 case "${1:-}" in
+  "")     cmd_wizard ;;
   init)   cmd_init ;;
   setup)  cmd_setup ;;
   import) shift; cmd_import "$@" ;;
