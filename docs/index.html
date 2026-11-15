@@ -4,122 +4,185 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>passfuck: one phrase, every password</title>
-<meta name="description" content="A free password manager for Mac and iPhone. Remember one phrase; your passwords live encrypted in your own GitHub repo.">
+<meta name="description" content="Remember one phrase. Your passwords live encrypted in your own GitHub repo and fill in on your Mac and iPhone.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='none' stroke='%23a4245c' stroke-width='3'/%3E%3Ccircle cx='16' cy='16' r='5' fill='%231d3557'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Schibsted+Grotesk:ital,wght@0,400;0,500;0,700;0,800;1,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Schibsted+Grotesk:ital,wght@0,400;0,500;0,700;0,800;1,400&display=swap" rel="stylesheet">
 <style>
   :root {
     --paper: #e9efee;
     --ink: #1d3557;
     --ink-soft: #4a5f78;
     --line: #9fb3b9;
+    --faint: #d5dfe0;
     --security: #a4245c;
+    --security-wash: #f6e3ec;
     --white: #ffffff;
-    --measure: 68ch;
+    --mono: "IBM Plex Mono", ui-monospace, monospace;
   }
   * { box-sizing: border-box; }
-  html { -webkit-text-size-adjust: 100%; }
-  body {
-    margin: 0;
-    background: var(--paper);
-    color: var(--ink);
-    font: 400 1.0625rem/1.6 "Schibsted Grotesk", system-ui, sans-serif;
-  }
+  html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  body { margin: 0; background: var(--paper); color: var(--ink); font: 400 1.0625rem/1.6 "Schibsted Grotesk", system-ui, sans-serif; }
   a { color: var(--ink); text-decoration-color: var(--line); text-underline-offset: 3px; text-decoration-thickness: 1px; }
   a:hover { text-decoration-color: var(--security); }
   :focus-visible { outline: 2px solid var(--security); outline-offset: 3px; border-radius: 2px; }
+  code { font: 500 .9em var(--mono); overflow-wrap: anywhere; }
+  .wrap { max-width: 68rem; margin: 0 auto; padding: 0 1.5rem; }
 
-  .wrap { max-width: 64rem; margin: 0 auto; padding: 0 1.5rem; }
-
-  /* Hero: the rosette is the one loud thing on the page */
-  .hero { position: relative; padding: 7rem 0 5rem; overflow: hidden; }
-  .rosette {
-    position: absolute; right: -5rem; top: 50%; translate: 0 -50%;
-    width: min(34rem, 110vw); aspect-ratio: 1; pointer-events: none;
-  }
+  /* ---------- hero: the rosette is the one loud thing ---------- */
+  .hero { position: relative; padding: 6rem 0 4rem; overflow: hidden; }
+  .rosette { position: absolute; right: -5rem; top: 50%; translate: 0 -50%; width: min(34rem, 110vw); aspect-ratio: 1; pointer-events: none; }
   .rosette path { fill: none; stroke: var(--ink); stroke-width: .55; opacity: .32; }
   .rosette path.accent { stroke: var(--security); opacity: .55; stroke-width: .7; }
   .hero-text { position: relative; }
-  .hero-text > :not(.cmd) { max-width: 38rem; }
-  h1 {
-    margin: 0; font-weight: 800; letter-spacing: -.045em; line-height: .9;
-    font-size: clamp(3.5rem, 11vw, 7.5rem);
-  }
-  .lede { margin: 1.25rem 0 2.5rem; font-size: clamp(1.25rem, 2.6vw, 1.6rem); line-height: 1.35; max-width: 30ch; color: var(--ink); }
-
-  .cmd {
-    display: flex; align-items: stretch; background: var(--white);
-    border: 1px solid var(--ink); border-radius: 6px; width: max-content; max-width: 100%;
-    box-shadow: 4px 4px 0 var(--ink);
-  }
-  .cmd code {
-    flex: 1; min-width: 0; padding: 1rem 1.1rem; overflow-x: auto; white-space: nowrap;
-    font: 500 .9rem/1.4 "IBM Plex Mono", ui-monospace, monospace; color: var(--ink);
-  }
+  h1 { margin: 0; font-weight: 800; letter-spacing: -.045em; line-height: .9; font-size: clamp(3.5rem, 11vw, 7.5rem); }
+  .lede { margin: 1.25rem 0 2.25rem; font-size: clamp(1.2rem, 2.4vw, 1.5rem); line-height: 1.35; max-width: 28ch; }
+  .cmd { display: flex; align-items: stretch; background: var(--white); border: 1px solid var(--ink); border-radius: 6px; width: max-content; max-width: 100%; box-shadow: 4px 4px 0 var(--ink); }
+  .cmd code { flex: 1; min-width: 0; padding: 1rem 1.1rem; white-space: nowrap; overflow-x: auto; font: 500 .9rem/1.4 var(--mono); }
   .cmd code::before { content: "$ "; color: var(--line); }
-  .cmd button {
-    font: 700 .95rem "Schibsted Grotesk", sans-serif; color: var(--white); background: var(--ink);
-    border: 0; border-left: 1px solid var(--ink); padding: 0 1.25rem; cursor: pointer;
-    border-radius: 0 5px 5px 0; min-width: 6.5rem;
-  }
+  .cmd button { font: 700 .95rem "Schibsted Grotesk", sans-serif; color: var(--white); background: var(--ink); border: 0; padding: 0 1.25rem; cursor: pointer; border-radius: 0 5px 5px 0; min-width: 6.5rem; }
   .cmd button:hover { background: var(--security); }
-  .hint { margin: 1rem 0 0; font-size: .95rem; color: var(--ink-soft); max-width: 40rem; }
+  .hint { margin: 1rem 0 0; font-size: .95rem; color: var(--ink-soft); }
 
-  /* Body sections */
-  section { padding: 4rem 0; border-top: 1px solid var(--line); }
-  h2 { font-size: 1.75rem; letter-spacing: -.02em; line-height: 1.2; margin: 0 0 1.5rem; font-weight: 700; }
-  p { max-width: var(--measure); margin: 0 0 1rem; }
+  nav.parts { position: sticky; top: 0; z-index: 5; background: var(--paper); border-bottom: 1px solid var(--line); border-top: 1px solid var(--line); }
+  nav.parts ol { list-style: none; margin: 0 auto; padding: .75rem 1.5rem; max-width: 68rem; display: flex; gap: 1.75rem; overflow-x: auto; }
+  nav.parts a { text-decoration: none; font-weight: 700; white-space: nowrap; }
+  nav.parts a:hover { color: var(--security); }
+  nav.parts .key { margin-left: auto; display: inline-flex; align-items: center; gap: .45rem; font-size: .85rem; color: var(--ink-soft); white-space: nowrap; }
+  .swatch { width: 1.4rem; height: .9rem; border: 2px solid var(--security); border-radius: 4px; background: var(--security-wash); }
 
-  ol.steps { list-style: none; margin: 0; padding: 0; counter-reset: s; display: grid; gap: 2rem; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); }
-  ol.steps li { counter-increment: s; }
-  ol.steps li::before {
-    content: counter(s); display: block; font-weight: 800; font-size: 2.75rem; line-height: 1;
-    color: var(--security); margin-bottom: .6rem; letter-spacing: -.04em;
-  }
-  ol.steps strong { display: block; font-size: 1.15rem; margin-bottom: .3rem; }
-  ol.steps span { color: var(--ink-soft); }
+  /* ---------- sections and steps ---------- */
+  .part { padding: 3rem 0 .5rem; scroll-margin-top: 3.5rem; }
+  .part > h2 { font-size: 2rem; letter-spacing: -.025em; margin: 0; line-height: 1.15; }
+  .step { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 2.5rem; align-items: start; padding: 2.25rem 0; border-bottom: 1px solid var(--line); }
+  .part .step:last-child { border-bottom: 0; }
+  .step-text { position: sticky; top: 4.5rem; }
+  .num { font-weight: 800; font-size: 2.75rem; line-height: 1; color: var(--security); letter-spacing: -.04em; }
+  .step h3 { font-size: 1.3rem; margin: .45rem 0 .5rem; line-height: 1.25; letter-spacing: -.01em; }
+  .step p { margin: 0 0 .6rem; max-width: 46ch; }
+  .muted { color: var(--ink-soft); font-size: .95rem; }
 
-  dl.places { margin: 0; max-width: 46rem; }
-  .place { display: grid; grid-template-columns: 11rem 1fr; gap: 1rem; padding: .9rem 0; border-bottom: 1px dashed var(--line); }
-  .place:last-child { border-bottom: 0; }
-  dt { font-weight: 700; }
-  dd { margin: 0; color: var(--ink-soft); }
-  kbd, .place code { font: 500 .9em "IBM Plex Mono", monospace; color: var(--ink); }
+  .art { display: flex; flex-direction: column; gap: 1rem; align-items: center; min-width: 0; }
+  .art.pair { flex-direction: row; flex-wrap: wrap; align-items: flex-start; justify-content: center; }
 
-  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 2.5rem; max-width: 52rem; margin-bottom: 2rem; }
-  .split h3 { font-size: 1.1rem; margin: 0 0 .5rem; }
+  /* the one visual rule: pink = your action */
+  .act { color: var(--security); font-weight: 600; }
+  .ring { box-shadow: 0 0 0 2px var(--security), 0 0 0 6px var(--security-wash); border-radius: 6px; position: relative; }
+  .tag { position: absolute; white-space: nowrap; background: var(--security); color: var(--white); font: 700 .72rem "Schibsted Grotesk", sans-serif; padding: .2rem .5rem; border-radius: 999px; z-index: 2; }
+
+  /* Mac window */
+  .win { width: 100%; max-width: 34rem; background: var(--white); border: 1.5px solid var(--ink); border-radius: 10px; overflow: hidden; box-shadow: 5px 5px 0 var(--faint); }
+  .bar { display: flex; align-items: center; gap: .4rem; padding: .5rem .75rem; border-bottom: 1.5px solid var(--ink); background: var(--paper); }
+  .bar i { width: .7rem; height: .7rem; border: 1.5px solid var(--ink); border-radius: 50%; }
+  .bar b { flex: 1; text-align: center; font: 600 .75rem "Schibsted Grotesk", sans-serif; color: var(--ink-soft); margin-right: 2.2rem; }
+  .term pre { margin: 0; padding: .9rem 1rem 1.1rem; font: 400 .78rem/1.65 var(--mono); color: var(--ink-soft); white-space: pre-wrap; word-break: break-word; }
+  .term .in { color: var(--security); font-weight: 600; background: var(--security-wash); border-radius: 3px; padding: 0 .2rem; }
+  .term .ok, .term .hd { color: var(--ink); font-weight: 600; }
+  .term .dim { color: var(--line); }
+  .term .note { display: inline-block; font: 700 .7rem "Schibsted Grotesk", sans-serif; color: var(--white); background: var(--security); border-radius: 999px; padding: .05rem .5rem; margin-left: .4rem; }
+
+  /* browser */
+  .url { display: flex; align-items: center; gap: .5rem; padding: .45rem .75rem; border-bottom: 1.5px solid var(--ink); font: 500 .74rem var(--mono); color: var(--ink-soft); }
+  .url span { flex: 1; border: 1.5px solid var(--line); border-radius: 999px; padding: .2rem .7rem; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .url .ext { width: 1.4rem; height: 1.4rem; border: 1.5px solid var(--ink); border-radius: 5px; display: grid; place-items: center; font: 800 .7rem "Schibsted Grotesk"; color: var(--ink); flex: none; }
+  .page { padding: 1.25rem 1.25rem 1.5rem; position: relative; min-height: 10rem; }
+  .page h4 { margin: 0 0 .25rem; font-size: 1.05rem; }
+  .page .sub { margin: 0 0 1rem; font-size: .8rem; color: var(--ink-soft); }
+  .btn { display: inline-block; font: 700 .8rem "Schibsted Grotesk", sans-serif; padding: .45rem .9rem; border-radius: 6px; border: 1.5px solid var(--ink); background: var(--white); color: var(--ink); }
+  .btn.fill { background: var(--ink); color: var(--white); }
+  .icon-sq { width: 3rem; height: 3rem; border: 1.5px solid var(--ink); border-radius: 10px; display: grid; place-items: center; font: 800 1.1rem "Schibsted Grotesk"; flex: none; }
+  .listing { display: flex; gap: 1rem; align-items: center; }
+  .field { border: 1.5px solid var(--line); border-radius: 6px; padding: .45rem .6rem; font-size: .8rem; color: var(--ink-soft); margin-bottom: .55rem; min-height: 2.1rem; background: var(--white); }
+  .field.filled { color: var(--ink); font-weight: 600; }
+  .lbl { font-size: .72rem; color: var(--ink-soft); margin: 0 0 .2rem; }
+  .settings-row { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: .7rem 0; border-bottom: 1px dashed var(--line); font-size: .85rem; }
+  .settings-row:last-child { border-bottom: 0; }
+  .popup { position: absolute; top: .4rem; right: .6rem; width: 13.5rem; background: var(--white); border: 1.5px solid var(--ink); border-radius: 8px; box-shadow: 4px 4px 0 var(--faint); font-size: .8rem; z-index: 1; }
+  .popup .search { margin: .55rem; padding: .35rem .5rem; border-radius: 5px; font: 600 .78rem var(--mono); color: var(--security); }
+  .popup .item { padding: .45rem .65rem; border-top: 1px solid var(--faint); display: flex; justify-content: space-between; }
+  .popup .item.on { background: var(--security-wash); }
+  .popup .item small { color: var(--ink-soft); }
+
+  /* Raycast-style bar */
+  .cmdbar { width: 100%; max-width: 30rem; background: var(--white); border: 1.5px solid var(--ink); border-radius: 12px; box-shadow: 5px 5px 0 var(--faint); overflow: hidden; }
+  .cmdbar .q { display: flex; align-items: center; gap: .6rem; padding: .8rem 1rem; border-bottom: 1.5px solid var(--ink); }
+  .cmdbar .crumb { font-size: .72rem; border: 1.5px solid var(--ink); border-radius: 5px; padding: .1rem .4rem; font-weight: 700; }
+  .cmdbar .typed { color: var(--security); font-weight: 700; font-family: var(--mono); padding: 0 .3rem; }
+  .cmdbar .row { display: flex; justify-content: space-between; align-items: center; padding: .55rem 1rem; font-size: .85rem; }
+  .cmdbar .row.on { background: var(--security-wash); }
+  .cmdbar kbd { font: 500 .72rem var(--mono); border: 1px solid var(--line); border-radius: 4px; padding: .05rem .35rem; color: var(--ink-soft); }
+
+  /* Finder */
+  .files { display: grid; grid-template-columns: repeat(auto-fill, minmax(6.5rem, 1fr)); gap: 1rem .5rem; padding: 1.25rem 1rem 1.4rem; }
+  .file { display: flex; flex-direction: column; align-items: center; gap: .4rem; font: 500 .68rem var(--mono); text-align: center; word-break: break-all; }
+  .doc { width: 2.4rem; height: 3rem; border: 1.5px solid var(--ink); border-radius: 3px 10px 3px 3px; position: relative; }
+  .doc.key::after { content: ""; position: absolute; left: 50%; top: 55%; translate: -50% -50%; width: .7rem; height: .7rem; border: 1.5px solid var(--security); border-radius: 50%; }
+  .airdrop { display: flex; align-items: center; gap: 1rem; width: 100%; max-width: 34rem; justify-content: center; font-size: .8rem; color: var(--ink-soft); }
+  .airdrop .arrow { flex: 1; max-width: 8rem; border-top: 2px dashed var(--security); position: relative; }
+  .airdrop .arrow::after { content: ""; position: absolute; right: -2px; top: -6px; border: 5px solid transparent; border-left: 8px solid var(--security); }
+  .mini-phone { width: 3.2rem; height: 5.6rem; border: 2px solid var(--ink); border-radius: .8rem; display: grid; place-items: center; font-size: .6rem; font-weight: 700; text-align: center; }
+
+  /* iPhone */
+  .phone { width: 15.5rem; flex: none; border: 2px solid var(--ink); border-radius: 2.4rem; padding: .55rem; background: var(--white); box-shadow: 5px 5px 0 var(--faint); }
+  .screen { border: 1.5px solid var(--ink); border-radius: 1.9rem; overflow: hidden; height: 24rem; display: flex; flex-direction: column; position: relative; }
+  .island { width: 4.8rem; height: 1.15rem; border-radius: 999px; background: var(--ink); margin: .45rem auto .3rem; flex: none; }
+  .ios-title { font-weight: 800; font-size: 1.1rem; padding: .3rem 1rem .5rem; letter-spacing: -.02em; }
+  .ios-nav { display: flex; justify-content: space-between; padding: .2rem .9rem .3rem; font-size: .75rem; color: var(--ink-soft); }
+  .ios-group { margin: .4rem .7rem; border: 1.5px solid var(--line); border-radius: .8rem; overflow: hidden; }
+  .ios-row { display: flex; justify-content: space-between; align-items: center; gap: .5rem; padding: .55rem .75rem; font-size: .78rem; border-bottom: 1px solid var(--faint); }
+  .ios-row:last-child { border-bottom: 0; }
+  .ios-row .v { color: var(--ink-soft); font-size: .7rem; }
+  .ios-row.on { background: var(--security-wash); }
+  .chev::after { content: ">"; color: var(--line); font-weight: 700; }
+  .ios-caption { font-size: .66rem; color: var(--ink-soft); padding: .1rem 1.2rem .3rem; }
+  .toggle { width: 2.1rem; height: 1.25rem; border-radius: 999px; border: 1.5px solid var(--ink); position: relative; flex: none; }
+  .toggle::after { content: ""; position: absolute; top: .12rem; left: .14rem; width: .85rem; height: .85rem; border-radius: 50%; border: 1.5px solid var(--ink); background: var(--white); }
+  .toggle.yes { background: var(--security); border-color: var(--security); }
+  .toggle.yes::after { left: auto; right: .14rem; border-color: var(--security); }
+  .toggle.ink { background: var(--ink); border-color: var(--ink); }
+  .toggle.ink::after { border-color: var(--ink); }
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; border-top: 1.5px solid var(--ink); border-radius: 1.1rem 1.1rem 0 0; background: var(--white); padding: .5rem 0 .9rem; box-shadow: 0 -6px 0 var(--faint); }
+  .sheet .grab { width: 2.2rem; height: .25rem; border-radius: 999px; background: var(--line); margin: 0 auto .5rem; }
+  .sheet .opt { padding: .6rem 1rem; font-size: .8rem; border-top: 1px solid var(--faint); }
+  .app-icon { width: 3.6rem; height: 3.6rem; border-radius: .9rem; border: 1.5px solid var(--ink); display: grid; place-items: center; flex: none; }
+  .app-icon::before { content: ""; width: 1.2rem; height: 1.2rem; border: 2px solid var(--ink); border-radius: 50%; box-shadow: .75rem .75rem 0 -.42rem var(--ink); }
+  .kb { margin-top: auto; border-top: 1.5px solid var(--ink); background: var(--paper); padding: .4rem .45rem .7rem; }
+  .kb .qt { display: flex; justify-content: center; padding: .3rem 0 .5rem; font-size: .75rem; font-weight: 700; }
+  .kb .keys { display: grid; grid-template-columns: repeat(10, 1fr); gap: .22rem; }
+  .kb .keys i { height: 1.45rem; border: 1px solid var(--line); border-radius: 4px; background: var(--white); }
+
+  /* alias diagram */
+  .vault-card { display: grid; grid-template-columns: auto 1fr; gap: 1rem; align-items: center; width: 100%; max-width: 34rem; }
+  .entry-file { border: 1.5px solid var(--ink); border-radius: 8px; background: var(--white); padding: .7rem .9rem; font: 600 .85rem var(--mono); text-align: center; min-width: 7rem; }
+  .entry-file small { display: block; font: 400 .68rem "Schibsted Grotesk"; color: var(--ink-soft); margin-top: .2rem; }
+  .sealed { border: 1.5px dashed var(--security); border-radius: 8px; padding: .6rem .9rem; font: 400 .75rem/1.6 var(--mono); color: var(--ink-soft); background: var(--white); }
+  .sealed b { color: var(--security); font-family: "Schibsted Grotesk"; font-size: .72rem; display: block; margin-bottom: .15rem; }
+
+  /* what's public */
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; max-width: 46rem; margin: 1.25rem 0; }
+  .split h3 { font-size: 1.05rem; margin: 0 0 .35rem; }
   .split ul { margin: 0; padding-left: 1.1rem; color: var(--ink-soft); }
-  .split li { margin-bottom: .3rem; }
   .split .private h3 { color: var(--security); }
 
-  .note { margin-top: 1.5rem; color: var(--ink-soft); }
-  .note code, .phone code, p code { font: 500 .9em "IBM Plex Mono", monospace; color: var(--ink); }
-  ol.phone { margin: 0 0 1.5rem; padding-left: 1.4rem; max-width: var(--measure); }
-  ol.phone li { margin-bottom: .55rem; padding-left: .3rem; }
-  ol.phone li::marker { color: var(--security); font: 800 1em "Schibsted Grotesk", sans-serif; }
-  .rules { margin: 0 0 1.5rem; padding-left: 1.1rem; max-width: var(--measure); }
-  .rules li { margin-bottom: .4rem; }
-  .example {
-    max-width: 40rem; padding: 1.25rem 1.5rem; background: var(--white); border-left: 3px solid var(--security);
-    font-size: 1.2rem; font-style: italic;
+  footer { padding: 2rem 0 4rem; color: var(--ink-soft); font-size: .95rem; }
+  footer .wrap { border-top: 1px solid var(--line); padding-top: 2rem; }
+
+  @media (max-width: 820px) {
+    .step { grid-template-columns: 1fr; gap: 1.5rem; }
+    .step-text { position: static; }
+    nav.parts .key { display: none; }
   }
-  .example small { display: block; font-style: normal; font-size: .9rem; color: var(--ink-soft); margin-top: .4rem; }
-
-  footer .wrap { border-top: 1px solid var(--line); padding-top: 2.5rem; }
-  footer { padding: 0 0 4rem; color: var(--ink-soft); font-size: .95rem; }
-  footer p { max-width: none; }
-
   @media (max-width: 640px) {
     .hero { padding: 4rem 0 3rem; }
     .rosette { right: -45%; top: 1rem; translate: 0 0; width: 22rem; opacity: .6; }
-    .cmd { width: auto; }
+    .cmd { flex-direction: column; width: auto; }
     .cmd code { white-space: normal; word-break: break-all; }
-    .cmd { flex-direction: column; }
-    .cmd button { border-left: 0; border-top: 1px solid var(--ink); border-radius: 0 0 5px 5px; padding: .8rem; }
-    .place, .split { grid-template-columns: 1fr; gap: .25rem; }
-    .split { gap: 2rem; }
+    .cmd button { border-radius: 0 0 5px 5px; padding: .8rem; }
+    .split { grid-template-columns: 1fr; gap: 1.25rem; }
+    .phone { width: 14rem; }
+    .popup { width: 11.5rem; }
   }
 </style>
 </head>
@@ -127,105 +190,406 @@
 
 <header class="hero">
   <svg class="rosette" viewBox="-200 -200 400 400" aria-hidden="true"></svg>
-  <div class="wrap">
-    <div class="hero-text">
-      <h1>passfuck</h1>
-      <p class="lede">Remember one phrase. Get every password on your Mac and iPhone.</p>
-      <div class="cmd">
-        <code id="cmd">curl -fsSL https://vutran1710.github.io/passfuck/install | bash</code>
-        <button type="button" id="copy">Copy</button>
-      </div>
-      <p class="hint">Paste it into Terminal on your Mac. A guided setup takes about ten minutes.
-        <a href="install">Read the script</a> before you run it.</p>
-      <p class="hint"><a href="tutorial.html">Follow the illustrated tutorial</a> to see every step on Mac and iPhone.</p>
+  <div class="wrap hero-text">
+    <h1>passfuck</h1>
+    <p class="lede">Remember one phrase. Get every password on your Mac and iPhone.</p>
+    <div class="cmd">
+      <code id="cmd">curl -fsSL https://vutran1710.github.io/passfuck/install | bash</code>
+      <button type="button" id="copy">Copy</button>
     </div>
+    <p class="hint">Paste into Terminal, then follow the steps below. <a href="install">Read the script</a>.</p>
   </div>
 </header>
 
+<nav class="parts" aria-label="Sections">
+  <ol>
+    <li><a href="#mac">Mac</a></li>
+    <li><a href="#iphone">iPhone</a></li>
+    <li><a href="#daily">Every day</a></li>
+    <li><a href="#public">What's public</a></li>
+    <li class="key"><i class="swatch"></i>pink is what you do</li>
+  </ol>
+</nav>
+
 <main class="wrap">
-  <section>
-    <h2>How it works</h2>
-    <ol class="steps">
-      <li><strong>You invent one phrase</strong><span>It's the only thing you ever need to remember.</span></li>
-      <li><strong>It becomes your key</strong><span>The same phrase makes the same key on any machine, so there's no key file to lose.</span></li>
-      <li><strong>Passwords live in your repo</strong><span>Each one is encrypted and stored on your own GitHub, which any device can download.</span></li>
-      <li><strong>Your devices fill them in</strong><span>Mac and iPhone read from the repo, and every change syncs back to it.</span></li>
-    </ol>
-  </section>
 
-  <section>
-    <h2>Where you use it</h2>
-    <dl class="places">
-      <div class="place"><dt>In the browser</dt><dd>Click the Browserpass button in Brave or Chrome, type the alias, and it fills the login.</dd></div>
-      <div class="place"><dt>In any Mac app</dt><dd>Open Raycast, type the alias, and copy or paste the password. This works even in apps that hide their login fields.</dd></div>
-      <div class="place"><dt>On iPhone</dt><dd>Tap Passwords above the keyboard, choose Pass, and search for the alias. Or open the Pass app and tap to copy.</dd></div>
-      <div class="place"><dt>In Terminal</dt><dd><code>pass -c github.com</code> copies a password. <code>pass generate newsite.com 24</code> makes a new one.</dd></div>
-    </dl>
-    <p class="note">Every entry is saved under an alias you choose, like <code>gh</code> or <code>bank-main</code>, rather than the website's name. That keeps your list of sites private, but it means autofill can't guess the entry from the page you're on. You type the alias to find it.</p>
-  </section>
+<section class="part" id="mac">
+  <h2>Mac</h2>
 
-  <section id="iphone">
-    <h2>On your iPhone</h2>
-    <p>There's no app to build or download from us. Your iPhone uses <a href="https://apps.apple.com/app/pass-password-store/id1205820573">Pass - Password Store</a>, a free, open-source app on the App Store that has been around since 2017. It reads your vault directly, and we checked that it opens keys made from a phrase. Setup takes about five minutes, and the <a href="tutorial.html#iphone">tutorial</a> shows each screen.</p>
-    <ol class="phone">
-      <li>Install <a href="https://apps.apple.com/app/pass-password-store/id1205820573">Pass - Password Store</a> from the App Store.</li>
-      <li>On your Mac, run <code>pf phone</code>. A folder opens with your key, an access key for your vault, and instructions.</li>
-      <li>AirDrop the folder to your iPhone and save it to Files.</li>
-      <li>In the Pass app's settings, import the two keys from Files and enter your vault's address from the instructions. When it asks for your phrase, let it remember it so Face ID can unlock it from then on.</li>
-      <li>In iPhone Settings, open General, then AutoFill &amp; Passwords, and turn on Pass.</li>
-      <li>Delete the folder from your iPhone and your Mac.</li>
-    </ol>
-    <p>New passwords you save in the app sync back to your vault, and your Mac sees them within ten minutes.</p>
-  </section>
-
-  <section>
-    <h2>What's public and what isn't</h2>
-    <div class="split">
-      <div>
-        <h3>Anyone can see</h3>
-        <ul>
-          <li>The aliases you give your entries, and how many there are</li>
-          <li>When each entry was added or changed</li>
-          <li>The name and email used to make your key</li>
-        </ul>
-      </div>
-      <div class="private">
-        <h3>Only you can read</h3>
-        <ul>
-          <li>Which website each entry is for</li>
-          <li>Passwords</li>
-          <li>Usernames and emails</li>
-          <li>Notes and one-time codes</li>
-        </ul>
+  <article class="step">
+    <div class="step-text">
+      <div class="num">1</div>
+      <h3>Run the installer</h3>
+      <p>Paste the command into Terminal and press Return.</p>
+    </div>
+    <div class="art">
+      <div class="win term" role="img" aria-label="Terminal: install command typed, passfuck downloaded, setup starts">
+        <div class="bar"><i></i><i></i><i></i><b>Terminal</b></div>
+<pre aria-hidden="true"><span class="dim">~ %</span> <span class="in">curl -fsSL https://vutran1710.github.io/passfuck/install | bash</span>
+<span class="ok">==></span> Downloading passfuck to ~/.passfuck
+<span class="ok">==></span> Installed. Run 'pf' any time to re-open setup.
+<span class="hd">passfuck setup</span> — safe to re-run; finished steps are skipped.</pre>
       </div>
     </div>
-    <p>Pick aliases that mean something only to you. Renaming one later won't erase the old name, because the vault keeps its full history.</p>
-    <p>Because the repo is public, anyone can download it and try to guess your phrase on their own computers. Each guess costs them about ten seconds and a gigabyte of memory. That stops casual attempts, but a long-running attacker could still try billions, so the phrase itself has to be strong.</p>
-  </section>
+  </article>
 
-  <section>
-    <h2>Choosing your phrase</h2>
-    <ul class="rules">
-      <li>Use at least six or seven words.</li>
-      <li>Make it a sentence only you would come up with. Never use a lyric, quote or saying.</li>
-      <li>Leave out pet names, birthdays and addresses.</li>
-      <li>Type it exactly the same way every time, including capitals and spaces.</li>
-      <li>Write it on paper and keep it somewhere safe. If you lose it, nobody can recover your passwords.</li>
-    </ul>
-    <div class="example">my purple fridge argues with hanoi taxis at 3am
-      <small>This is the kind of sentence to aim for. Don't use this one; it's published here.</small></div>
-  </section>
+  <article class="step">
+    <div class="step-text">
+      <div class="num">2</div>
+      <h3>Choose your phrase</h3>
+      <p>Enter your name, email and phrase twice. The phrase stays hidden as you type.</p>
+      <p class="muted">Make it 6 or more invented words, not a quote. Write it on paper.</p>
+    </div>
+    <div class="art">
+      <div class="win term" role="img" aria-label="Terminal: name and email typed, phrase entered twice hidden, key created">
+        <div class="bar"><i></i><i></i><i></i><b>Terminal</b></div>
+<pre aria-hidden="true"><span class="hd">[1/6] Master phrase</span>
+Name &lt;email&gt; []: <span class="in">Vu Tran &lt;me@vutr.io&gt;</span>
+New master phrase: <span class="in">▮</span><span class="note">hidden</span>
+Type it again: <span class="in">▮</span>
+<span class="ok">==></span> Deriving key from phrase (takes ~10s on purpose…)
+<span class="ok">==></span> Key: 9F4082848FC213047F29532297FCFCA0C7B33C7E</pre>
+      </div>
+    </div>
+  </article>
+
+  <article class="step">
+    <div class="step-text">
+      <div class="num">3</div>
+      <h3>Log in to GitHub</h3>
+      <p>Copy the code, press Return, and approve it in the browser. This is skipped if you're already logged in.</p>
+    </div>
+    <div class="art">
+      <div class="win term" role="img" aria-label="Terminal: GitHub one-time code shown, then this machine is ready">
+        <div class="bar"><i></i><i></i><i></i><b>Terminal</b></div>
+<pre aria-hidden="true"><span class="hd">[2/6] This Mac</span>
+! First copy your one-time code: <span class="in">1A2B-3C4D</span>
+Press Enter to open github.com in your browser... <span class="in">⏎</span>
+✓ Logged in as vutran1710
+<span class="ok">==></span> This machine is ready.</pre>
+      </div>
+    </div>
+  </article>
+
+  <article class="step">
+    <div class="step-text">
+      <div class="num">4</div>
+      <h3>Add Browserpass</h3>
+      <p>Click <span class="act">Add to Brave</span> (or Chrome), then pin it in the toolbar.</p>
+    </div>
+    <div class="art">
+      <div class="win" role="img" aria-label="Browserpass extension page with Add to Brave highlighted">
+        <div class="bar"><i></i><i></i><i></i><b>Brave</b></div>
+        <div class="url" aria-hidden="true"><span>chromewebstore.google.com/detail/browserpass</span></div>
+        <div class="page" aria-hidden="true" style="min-height:0">
+          <div class="listing">
+            <div class="icon-sq">bp</div>
+            <div style="flex:1"><h4>Browserpass</h4><p class="sub" style="margin:0">Fills logins from your pass vault</p></div>
+            <span class="btn fill ring">Add to Brave<span class="tag" style="right:-.4rem;top:-1.6rem">click</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <article class="step">
+    <div class="step-text">
+      <div class="num">5</div>
+      <h3>Add Raycast</h3>
+      <p>Let it install Raycast, then click <span class="act">Install</span> on the Pass extension. This is how you fill passwords in any app.</p>
+    </div>
+    <div class="art">
+      <div class="win" role="img" aria-label="Raycast store: Pass extension with Install highlighted">
+        <div class="bar"><i></i><i></i><i></i><b>Raycast Store</b></div>
+        <div class="page" aria-hidden="true" style="min-height:0">
+          <div class="listing">
+            <div class="icon-sq">P</div>
+            <div style="flex:1"><h4>Pass</h4><p class="sub" style="margin:0">Command: Find in Pass</p></div>
+            <span class="btn fill ring">Install<span class="tag" style="right:-.4rem;top:-1.6rem">click</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <article class="step">
+    <div class="step-text">
+      <div class="num">6</div>
+      <h3>Export your old passwords</h3>
+      <p>In Brave or Chrome, open <code>brave://password-manager/settings</code> and click <span class="act">Export passwords</span>. In Apple Passwords, use File, then Export.</p>
+    </div>
+    <div class="art">
+      <div class="win" role="img" aria-label="Browser password settings with Export passwords highlighted">
+        <div class="bar"><i></i><i></i><i></i><b>Brave</b></div>
+        <div class="url" aria-hidden="true"><span>brave://password-manager/settings</span></div>
+        <div class="page" aria-hidden="true" style="min-height:0">
+          <div class="settings-row"><span>Import passwords</span><span class="btn">Select file</span></div>
+          <div class="settings-row"><span>Export passwords</span><span class="btn ring">Download file<span class="tag" style="right:-.4rem;top:-1.6rem">click</span></span></div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <article class="step">
+    <div class="step-text">
+      <div class="num">7</div>
+      <h3>Import with aliases</h3>
+      <p>Drag the file into Terminal. Give each password an alias only you'd recognise. Press Return to skip one.</p>
+      <p class="muted">Only the alias is public. The file is deleted afterwards.</p>
+    </div>
+    <div class="art">
+      <div class="win term" role="img" aria-label="Terminal: each site shown and an alias typed for it">
+        <div class="bar"><i></i><i></i><i></i><b>Terminal</b></div>
+<pre aria-hidden="true">Path to CSV: <span class="in">~/Downloads/Brave Passwords.csv</span>
+[1/48] github.com  (login: vu-personal)
+  alias: <span class="in">gh</span>
+[2/48] netflix.com  (login: me@vutr.io)
+  alias: <span class="in">tv</span>
+<span class="dim">…</span>
+imported 48, skipped 0</pre>
+      </div>
+      <div class="vault-card" role="img" aria-label="Anyone sees the alias gh; only you can read the site, login and password inside">
+        <div class="entry-file" aria-hidden="true">gh<small>anyone sees</small></div>
+        <div class="sealed" aria-hidden="true"><b>Sealed, only you can read</b>url: github.com<br>login: vu-personal<br>password: ••••••••••••</div>
+      </div>
+    </div>
+  </article>
+</section>
+
+<section class="part" id="iphone">
+  <h2>iPhone</h2>
+
+  <article class="step">
+    <div class="step-text">
+      <div class="num">8</div>
+      <h3>Install the app</h3>
+      <p>Get <a href="https://apps.apple.com/app/pass-password-store/id1205820573">Pass - Password Store</a>. It's free, open source and already on the App Store.</p>
+    </div>
+    <div class="art">
+      <div class="phone" role="img" aria-label="App Store: Pass - Password Store by Mingshen Sun, Get highlighted">
+        <div class="screen" aria-hidden="true" style="height:15rem">
+          <div class="island"></div>
+          <div style="display:flex;gap:.8rem;padding:.8rem 1rem;align-items:center">
+            <div class="app-icon"></div>
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:800;font-size:.9rem;line-height:1.2">Pass - Password Store</div>
+              <div style="font-size:.7rem;color:var(--ink-soft)">Mingshen Sun</div>
+              <span class="btn fill ring" style="margin-top:.45rem;padding:.25rem .9rem;border-radius:999px">Get<span class="tag" style="left:3.6rem;top:.05rem">tap</span></span>
+            </div>
+          </div>
+          <div class="ios-group"><div class="ios-row"><span>Price</span><span class="v">Free</span></div></div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <article class="step">
+    <div class="step-text">
+      <div class="num">9</div>
+      <h3>AirDrop your keys</h3>
+      <p>Answer yes at the setup's iPhone step, or run <code>pf phone</code>. AirDrop the folder that opens and save it to Files.</p>
+    </div>
+    <div class="art">
+      <div class="win" role="img" aria-label="Folder passfuck-for-iphone with key files and README">
+        <div class="bar"><i></i><i></i><i></i><b>passfuck-for-iphone</b></div>
+        <div class="files" aria-hidden="true">
+          <div class="file"><div class="doc key"></div>1-public-key.asc</div>
+          <div class="file"><div class="doc key"></div>2-private-key.asc</div>
+          <div class="file"><div class="doc key"></div>3-ssh-key</div>
+          <div class="file"><div class="doc"></div>README.txt</div>
+        </div>
+      </div>
+      <div class="airdrop" aria-hidden="true"><span>Mac</span><span class="arrow"></span><span class="act">AirDrop</span><span class="arrow"></span><div class="mini-phone">Save to Files</div></div>
+    </div>
+  </article>
+
+  <article class="step">
+    <div class="step-text">
+      <div class="num">10</div>
+      <h3>Import the keys</h3>
+      <p>In the app's settings, open <span class="act">PGP Key</span> and import both <code>.asc</code> files from Files. Enter your phrase and let it remember. Then open <span class="act">SSH Key</span> and import <code>3-ssh-key</code>.</p>
+    </div>
+    <div class="art">
+      <div class="phone" role="img" aria-label="Pass settings: PGP Key highlighted, sheet with Import from Files highlighted">
+        <div class="screen" aria-hidden="true">
+          <div class="island"></div>
+          <div class="ios-title">Settings</div>
+          <div class="ios-group">
+            <div class="ios-row"><span>Password Repository</span><span class="chev"></span></div>
+            <div class="ios-row on"><span class="act">PGP Key</span><span class="chev"></span></div>
+            <div class="ios-row"><span>SSH Key</span><span class="chev"></span></div>
+          </div>
+          <div class="sheet">
+            <div class="grab"></div>
+            <div class="opt" style="border-top:0;font-weight:700">Import PGP key</div>
+            <div class="opt">ASCII-Armor (paste)</div>
+            <div class="opt ring" style="margin:.2rem .6rem;border-top:0"><span class="act">Import from Files</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <article class="step">
+    <div class="step-text">
+      <div class="num">11</div>
+      <h3>Connect your vault</h3>
+      <p>Open <strong>Password Repository</strong>, copy in the values from <em>README.txt</em> and tap <span class="act">Save</span>.</p>
+    </div>
+    <div class="art">
+      <div class="phone" role="img" aria-label="Repository form: URL, branch main, username git, SSH key; Save highlighted">
+        <div class="screen" aria-hidden="true">
+          <div class="island"></div>
+          <div class="ios-nav"><span>Settings</span><span class="act ring" style="padding:.05rem .4rem">Save<span class="tag" style="right:3.4rem;top:.05rem">tap</span></span></div>
+          <div style="padding:.3rem .8rem">
+            <p class="lbl">Git repository URL</p>
+            <div class="field filled" style="font:600 .62rem/1.4 var(--mono);word-break:break-all">ssh://git@github.com/vutran1710/passfuck-vault.git</div>
+            <p class="lbl">Branch</p><div class="field filled">main</div>
+            <p class="lbl">Username</p><div class="field filled">git</div>
+            <p class="lbl">Authentication</p><div class="field filled">SSH Key</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <article class="step">
+    <div class="step-text">
+      <div class="num">12</div>
+      <h3>Turn on AutoFill</h3>
+      <p>In iPhone Settings, go to General, then AutoFill &amp; Passwords, and switch <span class="act">Pass</span> on. Then delete the key folder.</p>
+    </div>
+    <div class="art">
+      <div class="phone" role="img" aria-label="AutoFill and Passwords settings with Pass switched on">
+        <div class="screen" aria-hidden="true" style="height:17rem">
+          <div class="island"></div>
+          <div class="ios-title">AutoFill &amp; Passwords</div>
+          <div class="ios-group"><div class="ios-row"><span>AutoFill Passwords</span><span class="toggle yes ink"></span></div></div>
+          <div class="ios-caption">AutoFill from:</div>
+          <div class="ios-group">
+            <div class="ios-row"><span>Passwords</span><span class="toggle"></span></div>
+            <div class="ios-row on"><span class="act">Pass</span><span class="toggle yes ring" style="border-radius:999px"></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </article>
+</section>
+
+<section class="part" id="daily">
+  <h2>Every day</h2>
+
+  <article class="step">
+    <div class="step-text">
+      <div class="num">A</div>
+      <h3>Websites</h3>
+      <p>Click <span class="act">Browserpass</span>, type the alias and click it.</p>
+    </div>
+    <div class="art">
+      <div class="win" role="img" aria-label="Login page with Browserpass popup, alias gh typed">
+        <div class="bar"><i></i><i></i><i></i><b>Brave</b></div>
+        <div class="url" aria-hidden="true"><span>github.com/login</span><div class="ext ring">bp</div></div>
+        <div class="page" aria-hidden="true">
+          <h4>Sign in</h4>
+          <p class="lbl">Username</p><div class="field filled" style="width:55%">vu-personal</div>
+          <p class="lbl">Password</p><div class="field filled" style="width:55%">••••••••••••</div>
+          <div class="popup">
+            <div class="search ring">gh▮</div>
+            <div class="item on"><span class="act">gh</span><small>fill</small></div>
+            <div class="item"><span>work/code</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <article class="step">
+    <div class="step-text">
+      <div class="num">B</div>
+      <h3>Any Mac app</h3>
+      <p>In Raycast, open <span class="act">Find in Pass</span>, type the alias and press Return to copy. Then paste.</p>
+    </div>
+    <div class="art">
+      <div class="cmdbar" role="img" aria-label="Raycast Find in Pass, alias tv typed, tv selected">
+        <div class="q" aria-hidden="true"><span class="crumb">Find in Pass</span><span class="typed ring">tv▮</span></div>
+        <div class="row on" aria-hidden="true"><span class="act">tv</span><kbd>⏎ copy</kbd></div>
+        <div class="row" aria-hidden="true"><span>travel/airline</span></div>
+      </div>
+    </div>
+  </article>
+
+  <article class="step">
+    <div class="step-text">
+      <div class="num">C</div>
+      <h3>iPhone</h3>
+      <p>Tap <span class="act">Passwords</span> above the keyboard, choose Pass and search for the alias.</p>
+    </div>
+    <div class="art pair">
+      <div class="phone" role="img" aria-label="Login screen; Passwords button above the keyboard highlighted">
+        <div class="screen" aria-hidden="true" style="height:19rem">
+          <div class="island"></div>
+          <div style="padding:.6rem .9rem">
+            <p class="lbl">Customer code</p><div class="field" style="border-color:var(--ink)">▮</div>
+            <p class="lbl">Secret</p><div class="field"></div>
+          </div>
+          <div class="kb">
+            <div class="qt"><span class="ring act" style="padding:.15rem .7rem">Passwords</span></div>
+            <div class="keys"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          </div>
+        </div>
+      </div>
+      <div class="phone" role="img" aria-label="Pass picker: alias bank typed, bank-main highlighted">
+        <div class="screen" aria-hidden="true" style="height:19rem">
+          <div class="island"></div>
+          <div class="ios-nav"><span>Cancel</span><span>Pass</span></div>
+          <div style="padding:.3rem .8rem"><div class="field ring" style="font:600 .8rem var(--mono);color:var(--security)">bank▮</div></div>
+          <div class="ios-group">
+            <div class="ios-row on"><span class="act">bank-main</span><span class="v">Face ID</span></div>
+            <div class="ios-row"><span>bank-savings</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <article class="step">
+    <div class="step-text">
+      <div class="num">D</div>
+      <h3>New password</h3>
+      <p>Generate one, then paste it into the sign-up form. On iPhone, tap <span class="act">+</span> in the app.</p>
+    </div>
+    <div class="art">
+      <div class="win term" role="img" aria-label="Terminal: pass generate creates and copies a password for alias shop">
+        <div class="bar"><i></i><i></i><i></i><b>Terminal</b></div>
+<pre aria-hidden="true"><span class="dim">~ %</span> <span class="in">pass generate -c shop 24</span>
+Copied shop to clipboard. Will clear in 45 seconds.</pre>
+      </div>
+    </div>
+  </article>
+</section>
+
+<section class="part" id="public">
+  <h2>What's public</h2>
+  <div class="split">
+    <div>
+      <h3>Anyone can see</h3>
+      <ul><li>Your aliases</li><li>When entries changed</li></ul>
+    </div>
+    <div class="private">
+      <h3>Only you can read</h3>
+      <ul><li>Sites, usernames and passwords</li><li>Notes and one-time codes</li></ul>
+    </div>
+  </div>
+  <p class="muted" style="max-width:56ch">Anyone can download the vault and guess at your phrase, so make it long and invented.</p>
+</section>
+
 </main>
 
 <footer>
-  <div class="wrap">
-    <p>Built from free, open-source tools: <a href="https://www.passwordstore.org/">pass</a>, <a href="https://github.com/skeeto/passphrase2pgp">passphrase2pgp</a>, <a href="https://github.com/browserpass/browserpass-extension">Browserpass</a>, <a href="https://www.raycast.com/capipo/pass">Raycast Pass</a> and <a href="https://github.com/mssun/passforios">Pass - Password Store</a> for iPhone.</p>
-    <p><a href="https://github.com/vutran1710/passfuck">Source code</a> and <a href="https://github.com/vutran1710/passfuck-vault">the vault</a> are on GitHub.</p>
-  </div>
+  <div class="wrap">Built on <a href="https://www.passwordstore.org/">pass</a>, <a href="https://github.com/skeeto/passphrase2pgp">passphrase2pgp</a>, <a href="https://github.com/browserpass/browserpass-extension">Browserpass</a>, <a href="https://www.raycast.com/capipo/pass">Raycast</a> and <a href="https://github.com/mssun/passforios">Pass for iOS</a>. <a href="https://github.com/vutran1710/passfuck">Source</a>.</div>
 </footer>
 
 <script>
-  // Copy button
   const btn = document.getElementById('copy');
   btn.addEventListener('click', async () => {
     await navigator.clipboard.writeText(document.getElementById('cmd').textContent);
@@ -233,45 +597,38 @@
     setTimeout(() => (btn.textContent = 'Copy'), 1800);
   });
 
-  // Guilloché rosette, the fine-line pattern printed on banknotes and cheques
-  const svg = document.querySelector('.rosette');
-  const ns = 'http://www.w3.org/2000/svg';
-  const curve = (R, r, d, scale, turn, steps = 2400) => {
-    // hypotrochoid, closed after r / gcd(R, r) turns
-    const gcd = (a, b) => (b ? gcd(b, a % b) : a);
-    const loops = r / gcd(R, r), pts = [];
+  // Guilloché rosette, the fine-line pattern printed on banknotes
+  const svg = document.querySelector('.rosette'), ns = 'http://www.w3.org/2000/svg';
+  const gcd = (a, b) => (b ? gcd(b, a % b) : a);
+  const curve = (R, r, d, k, turn, steps = 2400) => {
+    const loops = r / gcd(R, r), c = Math.cos(turn), s = Math.sin(turn), pts = [];
     for (let i = 0; i <= steps; i++) {
       const t = (i / steps) * 2 * Math.PI * loops;
       const x = (R - r) * Math.cos(t) + d * Math.cos(((R - r) / r) * t);
       const y = (R - r) * Math.sin(t) - d * Math.sin(((R - r) / r) * t);
-      const c = Math.cos(turn), s = Math.sin(turn);
-      pts.push(((x * c - y * s) * scale).toFixed(2) + ',' + ((x * s + y * c) * scale).toFixed(2));
+      pts.push(((x * c - y * s) * k).toFixed(2) + ',' + ((x * s + y * c) * k).toFixed(2));
     }
     return 'M' + pts.join('L');
   };
-  const layers = [
+  const paths = [
     [96, 36, 74, 1.42, 0], [96, 36, 74, 1.42, 0.06], [96, 36, 74, 1.42, 0.12],
     [80, 22, 46, 1.6, 0], [80, 22, 46, 1.6, 0.09],
     [60, 25, 50, 1.25, 0.2, 'accent'],
     [50, 18, 30, 1.1, 0], [50, 18, 30, 1.1, 0.15],
     [30, 12, 20, 0.95, 0],
-  ];
-  const paths = layers.map(([R, r, d, k, turn, cls]) => {
+  ].map(([R, r, d, k, turn, cls]) => {
     const p = document.createElementNS(ns, 'path');
     p.setAttribute('d', curve(R, r, d, k, turn));
     if (cls) p.setAttribute('class', cls);
     svg.appendChild(p);
     return p;
   });
-
-  // One orchestrated moment: the rosette draws itself once on load
   if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
     paths.forEach((p, i) => {
       const len = p.getTotalLength();
       p.style.strokeDasharray = len;
-      p.style.strokeDashoffset = len;
       p.animate([{ strokeDashoffset: len }, { strokeDashoffset: 0 }],
-        { duration: 2600, delay: i * 140, easing: 'cubic-bezier(.5,0,.2,1)', fill: 'forwards' });
+        { duration: 2600, delay: i * 140, easing: 'cubic-bezier(.5,0,.2,1)', fill: 'both' });
     });
   }
 </script>
