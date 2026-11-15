@@ -54,7 +54,7 @@ pf phone                              # bundle key + deploy key for AirDrop to t
 pf init                               # change the master phrase (re-encrypts everything)
 ```
 
-`demo/stupid-app.html` is a login page with no autofill hints, for testing.
+`docs/demo/stupid-app.html` ([live](https://vutran1710.github.io/passfuck/demo/stupid-app.html)) is a login page with no autofill hints, for testing.
 
 ## Security model
 
